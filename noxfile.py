@@ -1,7 +1,7 @@
 import nox
 
 nox.options.sessions = ["lint"]
-locations = ["fs"]
+locations = ["src"]
 
 
 @nox.session

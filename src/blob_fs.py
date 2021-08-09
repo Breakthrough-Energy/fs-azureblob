@@ -1,13 +1,22 @@
+import datetime
 import io
 
 import requests
 from azure.storage.blob import ContainerClient
-
 from fs.base import FS
+from fs.enums import ResourceType
+from fs.errors import PermissionDenied
 from fs.info import Info
 from fs.mode import Mode
 from fs.path import basename
 from fs.subfs import SubFS
+from fs.time import datetime_to_epoch
+
+
+def _convert_to_epoch(props):
+    for k, v in props.items():
+        if isinstance(v, datetime.datetime):
+            props[k] = datetime_to_epoch(v)
 
 
 class BlobFS(FS):
@@ -19,7 +28,21 @@ class BlobFS(FS):
         )
 
     def getinfo(self, path, namespaces=None) -> Info:
+        namespaces = namespaces or ()
         info = {"basic": {"name": basename(path), "is_dir": False}}
+        if "details" in namespaces:
+            blob_client = self.client.get_blob_client(path)
+            props = blob_client.get_blob_properties()
+            details = {}
+            details["accessed"] = props["last_accessed_on"]
+            details["created"] = props["creation_time"]
+            details["metadata_changed"] = None
+            details["modified"] = props["last_modified"]
+            details["size"] = props["size"]
+            details["type"] = ResourceType.file
+            _convert_to_epoch(details)
+
+            info["details"] = details
         return Info(info)
 
     def listdir(self, path) -> list:
@@ -42,10 +65,10 @@ class BlobFS(FS):
                 yield chunk
 
     def remove(self, path) -> None:
-        pass
+        raise PermissionDenied
 
     def removedir(self, path) -> None:
-        pass
+        raise PermissionDenied
 
     def setinfo(self, path, info) -> None:
-        pass
+        raise PermissionDenied
