@@ -1,3 +1,4 @@
 fs
 azure-storage-blob
 requests
+pytest

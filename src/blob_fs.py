@@ -13,15 +13,15 @@ from fs.subfs import SubFS
 from fs.time import datetime_to_epoch
 
 
-def _convert_to_epoch(props):
+def _convert_to_epoch(props: dict) -> None:
     for k, v in props.items():
         if isinstance(v, datetime.datetime):
             props[k] = datetime_to_epoch(v)
 
 
 class BlobFS(FS):
-    def __init__(self, account_name, container):
-        # super().__init__()
+    def __init__(self, account_name: str, container: str):
+        super().__init__()
         self.client = ContainerClient(
             account_url=f"https://{account_name}.blob.core.windows.net",
             container_name=container,
@@ -46,12 +46,12 @@ class BlobFS(FS):
         return Info(info)
 
     def listdir(self, path) -> list:
-        if path == ".":
-            path = ""
-        return [b.name for b in self.client.list_blobs(path)]
-
-    def makedir(self, path, permissions=None, recreate=False) -> SubFS:
-        pass
+        path = self.validatepath(path)
+        parts = path.split("/")
+        num_parts = 0 if path == "" else len(parts)
+        suffix = parts[-1]
+        all = (b.name.split("/") for b in self.client.list_blobs(path))
+        return list({p[num_parts] for p in all if suffix in p or suffix == ""})
 
     def openbin(self, path, mode="r", buffering=-1, **options) -> io.IOBase:
         self.check()
@@ -63,6 +63,15 @@ class BlobFS(FS):
             r.raise_for_status()
             for chunk in r.iter_content(chunk_size=8192):
                 yield chunk
+
+    def validatepath(self, path: str) -> str:
+        if path == ".":
+            path = ""
+        path = path.strip("/")
+        return path
+
+    def makedir(self, path, permissions=None, recreate=False) -> SubFS:
+        raise PermissionDenied
 
     def remove(self, path) -> None:
         raise PermissionDenied
