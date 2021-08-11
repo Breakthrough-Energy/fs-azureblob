@@ -1,7 +1,13 @@
 import nox
 
-nox.options.sessions = ["lint"]
+nox.options.sessions = ["lint", "test"]
 locations = ["src"]
+
+
+@nox.session
+def test(session):
+    session.install("-r", "requirements.txt")
+    session.run("pytest")
 
 
 @nox.session

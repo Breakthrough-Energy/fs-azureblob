@@ -1,13 +1,11 @@
 import datetime
 import io
 
-import requests
 from azure.storage.blob import ContainerClient
 from fs.base import FS
 from fs.enums import ResourceType
 from fs.errors import PermissionDenied
 from fs.info import Info
-from fs.mode import Mode
 from fs.path import basename
 from fs.subfs import SubFS
 from fs.time import datetime_to_epoch
@@ -54,15 +52,12 @@ class BlobFS(FS):
         return list({p[num_parts] for p in all if suffix in p or suffix == ""})
 
     def openbin(self, path, mode="r", buffering=-1, **options) -> io.IOBase:
-        self.check()
-        _path = self.validatepath(path)
-        _mode = Mode(mode)
-        _mode.validate_bin()
-
-        with requests.get(_path, stream=True) as r:
-            r.raise_for_status()
-            for chunk in r.iter_content(chunk_size=8192):
-                yield chunk
+        path = self.validatepath(path)
+        blob_client = self.client.get_blob_client(path)
+        download_stream = blob_client.download_blob()
+        result = io.BytesIO(download_stream.content_as_bytes())
+        result.seek(0)
+        return result
 
     def validatepath(self, path: str) -> str:
         if path == ".":
