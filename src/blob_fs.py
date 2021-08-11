@@ -55,7 +55,8 @@ class BlobFS(FS):
         path = self.validatepath(path)
         blob_client = self.client.get_blob_client(path)
         download_stream = blob_client.download_blob()
-        result = io.BytesIO(download_stream.content_as_bytes())
+        result = io.BytesIO()
+        download_stream.readinto(result)
         result.seek(0)
         return result
 

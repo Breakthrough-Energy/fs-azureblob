@@ -3,6 +3,7 @@ import os
 import pytest
 
 from src.blob_fs import BlobFS
+from src.opener import BlobFSOpener
 
 account_name = "besciences"
 container = "profiles"
@@ -26,6 +27,7 @@ def test_getinfo():
     print(f"{info.modified=}")
 
 
+@pytest.mark.skip
 def test_download():
     bfs = BlobFS(account_name, container)
     fname = "demand_vJan2021.csv"
@@ -35,3 +37,16 @@ def test_download():
 
     assert os.path.exists(fname)
     os.remove(fname)
+
+
+def test_opener():
+    from fs.opener.parse import parse_fs_url
+    from fs import open_fs
+    from fs.opener.registry import registry
+
+    registry.install(BlobFSOpener)
+
+    url = f"azblob://{account_name}@{container}"
+    print(parse_fs_url(url))
+    bfs = open_fs(url)
+    assert isinstance(bfs, BlobFS)
