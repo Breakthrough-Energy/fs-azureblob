@@ -1,3 +1,0 @@
-fs
-azure-storage-blob
-pytest

@@ -8,10 +8,10 @@ setup(
     install_requires=["fs~=2.4.13", "azure-storage-blob~=12.8.1"],
     entry_points={
         "fs.opener": [
-            "azblob = src.opener:BlobFSOpener",
+            "azblob = fs.opener.blob_fs:BlobFSOpener",
         ]
     },
     license="MIT",
-    packages=["fs-azureblob"],
+    packages=["fs.azblob", "fs.opener"],
     version="0.0.1",
 )

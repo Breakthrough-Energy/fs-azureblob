@@ -2,14 +2,13 @@ import os
 
 import pytest
 
-from src.blob_fs import BlobFS
-from src.opener import BlobFSOpener
+from fs.azblob import BlobFS
+from fs.opener.blob_fs import BlobFSOpener
 
 account_name = "besciences"
 container = "profiles"
 
 
-@pytest.mark.skip
 def test_listdir():
     bfs = BlobFS(account_name, container)
     for path in ("", ".", "/", "raw", "raw/usa_tamu", "raw_usa"):
@@ -17,7 +16,6 @@ def test_listdir():
         print(bfs.listdir(path))
 
 
-@pytest.mark.skip
 def test_getinfo():
     bfs = BlobFS(account_name, container)
     info = bfs.getinfo("version.json", namespaces=["details"])

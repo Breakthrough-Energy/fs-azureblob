@@ -1,9 +1,8 @@
 __all__ = ["BlobFSOpener"]
 
+from fs.azblob import BlobFS
 from fs.opener import Opener
 from fs.opener.errors import OpenerError
-
-from src.blob_fs import BlobFS
 
 
 class BlobFSOpener(Opener):
