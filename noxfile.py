@@ -1,7 +1,7 @@
 import nox
 
 nox.options.sessions = ["lint", "test"]
-locations = ["fs"]
+locations = ["fs", "noxfile.py"]
 
 
 @nox.session

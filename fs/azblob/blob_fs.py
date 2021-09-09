@@ -4,7 +4,7 @@ import io
 from azure.storage.blob import ContainerClient
 from fs.base import FS
 from fs.enums import ResourceType
-from fs.errors import PermissionDenied
+from fs.errors import PermissionDenied, ResourceNotFound
 from fs.info import Info
 from fs.path import basename
 from fs.subfs import SubFS
@@ -18,19 +18,23 @@ def _convert_to_epoch(props: dict) -> None:
 
 
 class BlobFS(FS):
-    def __init__(self, account_name: str, container: str):
+    def __init__(self, account_name: str, container: str, account_key=None):
         super().__init__()
         self.client = ContainerClient(
             account_url=f"https://{account_name}.blob.core.windows.net",
             container_name=container,
+            credential=account_key,
         )
 
     def getinfo(self, path, namespaces=None) -> Info:
         namespaces = namespaces or ()
+        path = self.validatepath(path)
+        blob = self.client.get_blob_client(path)
+        if not blob.exists():
+            raise ResourceNotFound
         info = {"basic": {"name": basename(path), "is_dir": False}}
         if "details" in namespaces:
-            blob_client = self.client.get_blob_client(path)
-            props = blob_client.get_blob_properties()
+            props = blob.get_blob_properties()
             details = {}
             details["accessed"] = props["last_accessed_on"]
             details["created"] = props["creation_time"]
@@ -53,8 +57,7 @@ class BlobFS(FS):
 
     def openbin(self, path, mode="r", buffering=-1, **options) -> io.IOBase:
         path = self.validatepath(path)
-        blob_client = self.client.get_blob_client(path)
-        download_stream = blob_client.download_blob()
+        download_stream = self.client.download_blob(path)
         result = io.BytesIO()
         download_stream.readinto(result)
         result.seek(0)
@@ -67,13 +70,14 @@ class BlobFS(FS):
         return path
 
     def makedir(self, path, permissions=None, recreate=False) -> SubFS:
-        raise PermissionDenied
+        print("Directories not supported for azblob filesystem")
 
     def remove(self, path) -> None:
-        raise PermissionDenied
+        path = self.validatepath(path)
+        self.client.delete_blob(path)
 
     def removedir(self, path) -> None:
-        raise PermissionDenied
+        print("Directories not supported for azblob filesystem")
 
     def setinfo(self, path, info) -> None:
         raise PermissionDenied

@@ -12,6 +12,7 @@ class BlobFSOpener(Opener):
 
     def open_fs(self, fs_url, parse_result, writeable, create, cwd):
         account_name = parse_result.username
+        account_key = parse_result.password
         container = parse_result.resource
 
         if account_name is None:
@@ -19,4 +20,4 @@ class BlobFSOpener(Opener):
         if container is None:
             raise OpenerError("container is required")
 
-        return BlobFS(account_name, container)
+        return BlobFS(account_name, container, account_key)

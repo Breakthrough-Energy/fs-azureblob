@@ -48,3 +48,11 @@ def test_opener():
     print(parse_fs_url(url))
     bfs = open_fs(url)
     assert isinstance(bfs, BlobFS)
+
+
+@pytest.mark.skip
+def test_remove():
+    key = os.getenv("BLOB_ACCOUNT_KEY")
+    assert key is not None, "account key required for remove operation"
+
+    bfs = BlobFS(account_name, "test", key)
