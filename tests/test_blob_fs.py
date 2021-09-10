@@ -6,12 +6,12 @@ from fs.azblob import BlobFS
 from fs.opener.blob_fs import BlobFSOpener
 
 account_name = "besciences"
-container = "profiles"
+container = "test"
 
 
 def test_listdir():
     bfs = BlobFS(account_name, container)
-    for path in ("", ".", "/", "raw", "raw/usa_tamu", "raw_usa"):
+    for path in ("", ".", "/", "raw", "raw/test_usa_tamu", "raw/test"):
         print(f"{path=}")
         print(bfs.listdir(path))
 
@@ -25,11 +25,10 @@ def test_getinfo():
     print(f"{info.modified=}")
 
 
-@pytest.mark.skip
 def test_download():
     bfs = BlobFS(account_name, container)
     fname = "demand_vJan2021.csv"
-    path = f"raw/usa_tamu/{fname}"
+    path = f"raw/test_usa_tamu/{fname}"
     with open(fname, "wb") as f:
         bfs.download(path, f)
 

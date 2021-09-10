@@ -6,6 +6,7 @@ from fs.base import FS
 from fs.enums import ResourceType
 from fs.errors import PermissionDenied, ResourceNotFound
 from fs.info import Info
+from fs.mode import Mode
 from fs.path import basename
 from fs.subfs import SubFS
 from fs.time import datetime_to_epoch
@@ -57,11 +58,15 @@ class BlobFS(FS):
 
     def openbin(self, path, mode="r", buffering=-1, **options) -> io.IOBase:
         path = self.validatepath(path)
-        download_stream = self.client.download_blob(path)
-        result = io.BytesIO()
-        download_stream.readinto(result)
-        result.seek(0)
-        return result
+        mode = Mode(mode)
+        if mode.reading:
+            download_stream = self.client.download_blob(path)
+            result = io.BytesIO()
+            download_stream.readinto(result)
+            result.seek(0)
+            return result
+        elif mode.writing:
+            raise ValueError("writing mode not supported on openbin yet")
 
     def validatepath(self, path: str) -> str:
         if path == ".":
