@@ -11,6 +11,8 @@ from fs.path import basename
 from fs.subfs import SubFS
 from fs.time import datetime_to_epoch
 
+from fs.azblob.blob_file import BlobFile
+
 
 def _convert_to_epoch(props: dict) -> None:
     for k, v in props.items():
@@ -60,11 +62,8 @@ class BlobFS(FS):
         path = self.validatepath(path)
         mode = Mode(mode)
         if mode.reading:
-            download_stream = self.client.download_blob(path)
-            result = io.BytesIO()
-            download_stream.readinto(result)
-            result.seek(0)
-            return result
+            return BlobFile(self.client.get_blob_client(path), mode)
+
         elif mode.writing:
             raise ValueError("writing mode not supported on openbin yet")
 

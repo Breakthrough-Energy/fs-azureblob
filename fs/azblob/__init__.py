@@ -1,1 +1,1 @@
-from .blob_fs import BlobFS  # noqa: F401
+from .blob_fs import BlobFile, BlobFS  # noqa: F401
