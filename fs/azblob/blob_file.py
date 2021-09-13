@@ -6,9 +6,9 @@ from azure.storage.blob import BlobClient
 
 class BlobFile(io.IOBase):
     def __init__(self, client: BlobClient, mode=None):
-        self._f = None
         self.client = client
         self.mode = mode
+        self._reader = None
 
     def flush(self) -> None:
         pass
@@ -31,19 +31,10 @@ class BlobFile(io.IOBase):
     def read(self, n: int = -1) -> bytes:
         if n == -1:
             return self.readall()
-        stream = self.client.download_blob()
 
-        leftover = bytearray()
-        chunks = iter(stream.chunks())
-        while True:
-            if len(leftover) < n:
-                try:
-                    leftover.extend(next(chunks))
-                except StopIteration:
-                    yield bytes(leftover)
-            curr, leftover = leftover[:n], leftover[n:]
-            if len(curr) == n:
-                yield bytes(curr)
+        if self._reader is None:
+            self._reader = ChunkReader(self.client.download_blob())
+        return self._reader.get_next(n)
 
     def readall(self) -> bytes:
         stream = self.client.download_blob()
@@ -66,3 +57,24 @@ class BlobFile(io.IOBase):
     def __iter__(self) -> Iterator[bytes]:
         # TODO
         raise NotImplementedError
+
+
+class ChunkReader:
+    def __init__(self, stream) -> None:
+        self.chunks = stream.chunks()
+        self.leftover = bytearray()
+        self.eof = False
+
+    def get_next(self, size):
+        if self.eof:
+            return None
+        n = size
+        while len(self.leftover) < n:
+            try:
+                self.leftover.extend(next(self.chunks))
+            except StopIteration:
+                self.eof = True
+                return bytes(self.leftover)
+        curr, self.leftover = self.leftover[:n], self.leftover[n:]
+        assert len(curr) == n
+        return bytes(curr)

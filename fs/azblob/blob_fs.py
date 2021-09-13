@@ -34,7 +34,7 @@ class BlobFS(FS):
         path = self.validatepath(path)
         blob = self.client.get_blob_client(path)
         if not blob.exists():
-            raise ResourceNotFound
+            raise ResourceNotFound(path)
         info = {"basic": {"name": basename(path), "is_dir": False}}
         if "details" in namespaces:
             props = blob.get_blob_properties()

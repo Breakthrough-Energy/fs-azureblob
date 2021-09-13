@@ -25,7 +25,6 @@ def test_getinfo():
     print(f"{info.modified=}")
 
 
-@pytest.mark.skip
 def test_download():
     bfs = BlobFS(account_name, container)
     fname = "demand_vJan2021.csv"
@@ -34,6 +33,7 @@ def test_download():
         bfs.download(path, f)
 
     assert os.path.exists(fname)
+    assert os.stat(fname).st_size > 0
     os.remove(fname)
 
 
