@@ -1,14 +1,15 @@
 import io
+import typing
 from typing import Iterator, List
 
 from azure.storage.blob import BlobClient
 
 
-class BlobFile(io.IOBase):
+class BlobFile(io.RawIOBase):
     def __init__(self, client: BlobClient, mode=None):
         self.client = client
         self.mode = mode
-        self._reader = None
+        self._reader: ChunkReader = None  # type: ignore
 
     def flush(self) -> None:
         pass
@@ -40,6 +41,7 @@ class BlobFile(io.IOBase):
         stream = self.client.download_blob()
         return stream.content_as_bytes()
 
+    @typing.no_type_check
     def readinto(self, b: bytearray) -> int:
         before = len(b)
         b.extend(self.readall())

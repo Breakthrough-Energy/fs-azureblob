@@ -1,5 +1,5 @@
 import datetime
-import io
+from typing import BinaryIO
 
 from azure.storage.blob import ContainerClient
 from fs.base import FS
@@ -58,14 +58,13 @@ class BlobFS(FS):
         all = (b.name.split("/") for b in self.client.list_blobs(path))
         return list({p[num_parts] for p in all if suffix in p or suffix == ""})
 
-    def openbin(self, path, mode="r", buffering=-1, **options) -> io.IOBase:
+    def openbin(self, path, mode="r", buffering=-1, **options) -> BinaryIO:
         path = self.validatepath(path)
         mode = Mode(mode)
         if mode.reading:
-            return BlobFile(self.client.get_blob_client(path), mode)
+            return BlobFile(self.client.get_blob_client(path), mode)  # type: ignore
 
-        elif mode.writing:
-            raise ValueError("writing mode not supported on openbin yet")
+        raise ValueError("writing mode not supported on openbin yet")
 
     def validatepath(self, path: str) -> str:
         if path == ".":
@@ -73,7 +72,7 @@ class BlobFS(FS):
         path = path.strip("/")
         return path
 
-    def makedir(self, path, permissions=None, recreate=False) -> SubFS:
+    def makedir(self, path, permissions=None, recreate=False) -> SubFS:  # type: ignore
         print("Directories not supported for azblob filesystem")
 
     def remove(self, path) -> None:
