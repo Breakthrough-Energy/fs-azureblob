@@ -61,10 +61,7 @@ class BlobFS(FS):
     def openbin(self, path, mode="r", buffering=-1, **options) -> BinaryIO:
         path = self.validatepath(path)
         mode = Mode(mode)
-        if mode.reading:
-            return BlobFile(self.client.get_blob_client(path), mode)  # type: ignore
-
-        raise ValueError("writing mode not supported on openbin yet")
+        return BlobFile(self.client.get_blob_client(path), mode)  # type: ignore
 
     def validatepath(self, path: str) -> str:
         if path == ".":

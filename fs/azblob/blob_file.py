@@ -2,7 +2,7 @@ import io
 import typing
 from typing import Iterator, List
 
-from azure.storage.blob import BlobClient
+from azure.storage.blob import BlobClient, BlobType
 
 
 class BlobFile(io.RawIOBase):
@@ -27,6 +27,7 @@ class BlobFile(io.RawIOBase):
         return False
 
     def write(self, data) -> int:
+        self.client.upload_blob(data, blob_type=BlobType.AppendBlob)
         return len(data)
 
     def read(self, n: int = -1) -> bytes:
