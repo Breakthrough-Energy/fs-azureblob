@@ -2,13 +2,16 @@ import io
 import os
 
 import pytest
+from azure.storage.blob import BlobClient, BlobType
+from fs.mode import Mode
 
-from fs.azblob import BlobFS
+from fs.azblob import BlobFS, BlobFile
 from fs.opener.blob_fs import BlobFSOpener
 
 BLOB_ACCOUNT_KEY = "BLOB_ACCOUNT_KEY"
 account_name = "besciences"
 container = "test"
+url = f"https://{account_name}.blob.core.windows.net"
 
 
 @pytest.fixture
@@ -46,6 +49,26 @@ def test_download(bfs):
     assert os.path.exists(fname)
     assert os.stat(fname).st_size > 0
     os.remove(fname)
+
+
+@pytest.mark.skip
+def test_readline(bfs_rw):
+    fname = "hello.txt"
+    bfs_rw.remove(fname)
+
+    data = io.BytesIO(b"line1\nline2\n")
+    bfs_rw.upload(fname, data)
+
+    bc = BlobClient(url, container, fname)
+    bfile = BlobFile(bc, Mode("r"))
+    line1 = bfile.readline()
+    assert line1 == b"line1\n"
+    line2 = bfile.readline()
+    assert line2 == b"line2\n"
+    line3 = bfile.readline()
+    assert line3 == b""
+
+    bfs_rw.remove(fname)
 
 
 def test_opener():
