@@ -1,6 +1,6 @@
 import nox
 
-nox.options.sessions = ["lint", "test", "mypy"]
+nox.options.sessions = ["lint", "test", "mypy", "pytype"]
 locations = ["fs", "noxfile.py"]
 
 
@@ -8,7 +8,7 @@ locations = ["fs", "noxfile.py"]
 def test(session):
     session.install("pytest")
     session.install(".")
-    session.run("pytest")
+    session.run("pytest", "-m", "not creds")
 
 
 @nox.session
@@ -16,6 +16,13 @@ def mypy(session):
     session.install("mypy")
     session.install(".")
     session.run("mypy", ".")
+
+
+@nox.session
+def pytype(session):
+    session.install("pytype")
+    session.install(".")
+    session.run("pytype", ".")
 
 
 @nox.session

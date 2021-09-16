@@ -51,10 +51,9 @@ def test_download(bfs):
     os.remove(fname)
 
 
-@pytest.mark.skip
+@pytest.mark.creds
 def test_readline(bfs_rw):
     fname = "hello.txt"
-    bfs_rw.remove(fname)
 
     data = io.BytesIO(b"line1\nline2\n")
     bfs_rw.upload(fname, data)
@@ -84,7 +83,7 @@ def test_opener():
     assert isinstance(bfs, BlobFS)
 
 
-@pytest.mark.skip
+@pytest.mark.creds
 def test_create(bfs_rw):
     fname = "hello.txt"
     data = io.BytesIO(b"hello")

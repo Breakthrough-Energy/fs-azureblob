@@ -51,7 +51,7 @@ class BlobFile(io.RawIOBase):
         b.extend(self.readall())
         return len(b) - before
 
-    def readline(self, size: int = None) -> bytes:
+    def readline(self, size: Optional[int] = None) -> bytes:
         if self._reader is None:
             self._reader = BlobStreamReader(self.client.download_blob())
         result = self._reader.readline()
@@ -59,7 +59,7 @@ class BlobFile(io.RawIOBase):
             return result
         return result[:size]
 
-    def readlines(self, hint: int = None) -> List[bytes]:
+    def readlines(self, hint: Optional[int] = None) -> List[bytes]:
         def _is_complete(lines, hint):
             if hint is None or hint <= 0:
                 return False
@@ -99,7 +99,7 @@ class BlobStreamReader:
                 self.eof = True
                 return bytes(self.leftover)
         curr, _, self.leftover = self.leftover.partition(newline)
-        return bytes(curr + newline)
+        return bytes(curr) + newline
 
     def get_bytes(self, size: int) -> Bytes:
         if self.eof:
