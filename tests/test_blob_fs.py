@@ -2,10 +2,10 @@ import io
 import os
 
 import pytest
-from azure.storage.blob import BlobClient, BlobType
+from azure.storage.blob import BlobClient
 from fs.mode import Mode
 
-from fs.azblob import BlobFS, BlobFile
+from fs.azblob import BlobFile, BlobFS
 from fs.opener.blob_fs import BlobFSOpener
 
 BLOB_ACCOUNT_KEY = "BLOB_ACCOUNT_KEY"
@@ -71,8 +71,8 @@ def test_readline(bfs_rw):
 
 
 def test_opener():
-    from fs.opener.parse import parse_fs_url
     from fs import open_fs
+    from fs.opener.parse import parse_fs_url
     from fs.opener.registry import registry
 
     registry.install(BlobFSOpener)

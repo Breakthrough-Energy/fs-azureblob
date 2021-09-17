@@ -1,7 +1,7 @@
 import nox
 
 nox.options.sessions = ["lint", "test", "mypy", "pytype"]
-locations = ["fs", "noxfile.py"]
+locations = ["fs", "tests", "noxfile.py"]
 
 
 @nox.session
@@ -13,16 +13,18 @@ def test(session):
 
 @nox.session
 def mypy(session):
+    args = session.posargs or locations
     session.install("mypy")
     session.install(".")
-    session.run("mypy", ".")
+    session.run("mypy", *args)
 
 
 @nox.session
 def pytype(session):
+    args = session.posargs or locations
     session.install("pytype")
     session.install(".")
-    session.run("pytype", ".")
+    session.run("pytype", *args)
 
 
 @nox.session

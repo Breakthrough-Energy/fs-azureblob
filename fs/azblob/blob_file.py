@@ -2,7 +2,7 @@ import io
 import typing
 from typing import Iterator, List, Optional
 
-from azure.storage.blob import BlobClient, BlobType
+from azure.storage.blob import BlobClient
 
 Bytes = Optional[bytes]
 EMPTY_BYTES = b""
@@ -29,17 +29,21 @@ class BlobFile(io.RawIOBase):
     def seekable(self) -> bool:
         return False
 
+    @property
+    def reader(self) -> "BlobStreamReader":
+        if self._reader is None:
+            self._reader = BlobStreamReader(self.client.download_blob())
+        return self._reader
+
     def write(self, data) -> int:
-        self.client.upload_blob(data, blob_type=BlobType.AppendBlob)
+        self.client.upload_blob(data)
         return len(data)
 
     def read(self, n: int = -1) -> Bytes:
         if n == -1:
             return self.readall()
 
-        if self._reader is None:
-            self._reader = BlobStreamReader(self.client.download_blob())
-        return self._reader.get_bytes(n)
+        return self.reader.get_bytes(n)
 
     def readall(self) -> bytes:
         stream = self.client.download_blob()
@@ -52,9 +56,7 @@ class BlobFile(io.RawIOBase):
         return len(b) - before
 
     def readline(self, size: Optional[int] = None) -> bytes:
-        if self._reader is None:
-            self._reader = BlobStreamReader(self.client.download_blob())
-        result = self._reader.readline()
+        result = self.reader.readline()
         if size == -1 or result == EMPTY_BYTES:
             return result
         return result[:size]
@@ -66,9 +68,7 @@ class BlobFile(io.RawIOBase):
             return len(lines) == hint
 
         result = []
-        if self._reader is None:
-            self._reader = BlobStreamReader(self.client.download_blob())
-        while len(line := self._reader.readline()) > 0:
+        while len(line := self.reader.readline()) > 0:
             result.append(line)
             if _is_complete(result, hint):
                 break
@@ -80,6 +80,15 @@ class BlobFile(io.RawIOBase):
     def __iter__(self) -> Iterator[bytes]:
         # TODO
         raise NotImplementedError
+
+
+class BlobWriter:
+    def __init__(self, client) -> None:
+        self.client = client
+        self.buf = io.BytesIO()
+
+    def write(self, data):
+        pass
 
 
 class BlobStreamReader:
