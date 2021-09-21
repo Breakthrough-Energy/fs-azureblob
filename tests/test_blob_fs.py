@@ -66,7 +66,6 @@ class TestBlobFile:
     @pytest.mark.creds
     def test_readline(self, bfs_rw):
         fname = "hello.txt"
-
         data = io.BytesIO(b"line1\nline2\n")
         bfs_rw.upload(fname, data)
 
@@ -96,6 +95,19 @@ class TestBlobFile:
         # with BlobFile(bc, Mode("w")) as bfile:
         #     with pytest.raises(ValueError):
         #         _ = bfile.reader
+
+    @pytest.mark.creds
+    def test_iterate_lines(self, bfs_rw):
+        fname = "hello.txt"
+        data = io.BytesIO(b"line1\nline2\n\n")
+        bfs_rw.upload(fname, data)
+
+        bc = BlobClient(url, container, fname)
+        bfile = BlobFile(bc, Mode("r"))
+        count = 0
+        for _ in bfile:
+            count += 1
+        assert count == 3
 
 
 class TestOpener:

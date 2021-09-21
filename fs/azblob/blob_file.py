@@ -1,3 +1,4 @@
+import array
 import io
 import typing
 from typing import Iterator, List, Optional
@@ -92,11 +93,19 @@ class BlobFile(io.RawIOBase):
         return result
 
     def writelines(self, lines) -> None:
-        raise NotImplementedError
+        for line in lines:
+            if isinstance(line, array.array):
+                line = line.tobytes()
+            self.writer.write(line + b"\n")
+
+    def __next__(self) -> bytes:
+        line = self.readline()
+        if line == EMPTY_BYTES:
+            raise StopIteration
+        return line
 
     def __iter__(self) -> Iterator[bytes]:
-        # TODO
-        raise NotImplementedError
+        return self
 
 
 class BlobWriter:
