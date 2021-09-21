@@ -46,7 +46,7 @@ class BlobFile(io.RawIOBase):
 
     @property
     def writer(self) -> "BlobWriter":
-        if not self.writable:
+        if not self.writable():
             raise ValueError("BlobFile must be opened in writing mode")
         if self._writer is None:
             self._writer = BlobWriter(self.client)
@@ -108,7 +108,7 @@ class BlobWriter:
         self.buf.extend(data)
 
     def commit(self):
-        self.client.upload_blob(self.buf)
+        self.client.upload_blob(bytes(self.buf))
 
 
 class BlobStreamReader:

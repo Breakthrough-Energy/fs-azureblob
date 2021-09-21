@@ -48,6 +48,7 @@ def test_getinfo(bfs):
     print(f"{info.size=}")
     print(f"{info.created=}")
     print(f"{info.modified=}")
+    assert info.size > 0
 
 
 def test_download(bfs):
@@ -61,23 +62,40 @@ def test_download(bfs):
     os.remove(fname)
 
 
-@pytest.mark.creds
-def test_readline(bfs_rw):
-    fname = "hello.txt"
+class TestBlobFile:
+    @pytest.mark.creds
+    def test_readline(self, bfs_rw):
+        fname = "hello.txt"
 
-    data = io.BytesIO(b"line1\nline2\n")
-    bfs_rw.upload(fname, data)
+        data = io.BytesIO(b"line1\nline2\n")
+        bfs_rw.upload(fname, data)
 
-    bc = BlobClient(url, container, fname)
-    bfile = BlobFile(bc, Mode("r"))
-    line1 = bfile.readline()
-    assert line1 == b"line1\n"
-    line2 = bfile.readline()
-    assert line2 == b"line2\n"
-    line3 = bfile.readline()
-    assert line3 == b""
+        bc = BlobClient(url, container, fname)
+        bfile = BlobFile(bc, Mode("r"))
+        line1 = bfile.readline()
+        assert line1 == b"line1\n"
+        line2 = bfile.readline()
+        assert line2 == b"line2\n"
+        line3 = bfile.readline()
+        assert line3 == b""
 
-    bfs_rw.remove(fname)
+        bfs_rw.remove(fname)
+
+    def test_open_close(self):
+        bc = BlobClient(url, container, "some_file")
+        with BlobFile(bc, Mode("r")) as bfile:
+            assert not bfile.closed
+        assert bfile.closed
+
+    def test_validate_mode(self):
+        bc = BlobClient(url, container, "some_file")
+        with BlobFile(bc, Mode("r")) as bfile:
+            with pytest.raises(ValueError):
+                _ = bfile.writer
+
+        # with BlobFile(bc, Mode("w")) as bfile:
+        #     with pytest.raises(ValueError):
+        #         _ = bfile.reader
 
 
 class TestOpener:
@@ -96,12 +114,26 @@ class TestOpener:
 
 
 @pytest.mark.creds
-def test_create(bfs_rw):
-    fname = "hello.txt"
-    data = io.BytesIO(b"hello")
-    bfs_rw.upload(fname, data)
+class TestUpload:
+    def test_create(self, bfs_rw):
+        fname = "hello.txt"
+        data = io.BytesIO(b"hello")
+        bfs_rw.upload(fname, data)
+        assert fname in bfs_rw.listdir(".")
+        bfs_rw.remove(fname)
+        assert fname not in bfs_rw.listdir(".")
 
-    assert fname in bfs_rw.listdir(".")
+    def test_upload_empty(self, bfs_rw):
+        fname = "empty.txt"
+        data = io.BytesIO(b"")
+        bfs_rw.upload(fname, data)
+        assert fname in bfs_rw.listdir(".")
+        bfs_rw.remove(fname)
 
-    bfs_rw.remove(fname)
-    assert fname not in bfs_rw.listdir(".")
+    def test_upload_large_file(self, bfs_rw):
+        # creates 95 MB file
+        fname = "big.txt"
+        data = io.BytesIO(b"many_bytes" * int(1e7))
+        bfs_rw.upload(fname, data)
+        assert fname in bfs_rw.listdir(".")
+        bfs_rw.remove(fname)
