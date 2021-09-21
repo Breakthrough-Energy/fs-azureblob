@@ -5,8 +5,13 @@ import pytest
 from azure.storage.blob import BlobClient
 from fs.mode import Mode
 
+from fs import open_fs
 from fs.azblob import BlobFile, BlobFS
 from fs.opener.blob_fs import BlobFSOpener
+from fs.opener.parse import parse_fs_url
+from fs.opener.registry import registry
+
+registry.install(BlobFSOpener)
 
 BLOB_ACCOUNT_KEY = "BLOB_ACCOUNT_KEY"
 account_name = "besciences"
@@ -20,10 +25,15 @@ def bfs():
 
 
 @pytest.fixture
-def bfs_rw():
+def account_key():
     key = os.getenv(BLOB_ACCOUNT_KEY)
     assert key is not None, f"{BLOB_ACCOUNT_KEY} required for write operations"
-    return BlobFS(account_name, container, account_key=key)
+    return key
+
+
+@pytest.fixture
+def bfs_rw(account_key):
+    return BlobFS(account_name, container, account_key=account_key)
 
 
 def test_listdir(bfs):
@@ -70,17 +80,19 @@ def test_readline(bfs_rw):
     bfs_rw.remove(fname)
 
 
-def test_opener():
-    from fs import open_fs
-    from fs.opener.parse import parse_fs_url
-    from fs.opener.registry import registry
+class TestOpener:
+    def test_opener(self):
+        url = f"azblob://{account_name}@{container}"
+        print(parse_fs_url(url))
+        bfs = open_fs(url)
+        assert isinstance(bfs, BlobFS)
 
-    registry.install(BlobFSOpener)
-
-    url = f"azblob://{account_name}@{container}"
-    print(parse_fs_url(url))
-    bfs = open_fs(url)
-    assert isinstance(bfs, BlobFS)
+    @pytest.mark.creds
+    def test_opener_with_creds(self, account_key):
+        url = f"azblob://{account_name}:{account_key}@{container}"
+        print(parse_fs_url(url))
+        bfs = open_fs(url)
+        assert isinstance(bfs, BlobFS)
 
 
 @pytest.mark.creds

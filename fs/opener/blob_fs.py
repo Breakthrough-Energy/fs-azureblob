@@ -19,5 +19,7 @@ class BlobFSOpener(Opener):
             raise OpenerError("account_name is required")
         if container is None:
             raise OpenerError("container is required")
+        if account_key == "":
+            account_key = None
 
         return BlobFS(account_name, container, account_key)

@@ -4,7 +4,7 @@ from typing import BinaryIO
 from azure.storage.blob import ContainerClient
 from fs.base import FS
 from fs.enums import ResourceType
-from fs.errors import PermissionDenied, ResourceNotFound
+from fs.errors import FSError, PermissionDenied, ResourceNotFound
 from fs.info import Info
 from fs.mode import Mode
 from fs.path import basename
@@ -28,6 +28,10 @@ class BlobFS(FS):
             container_name=container,
             credential=account_key,
         )
+        if not self.client.exists():
+            raise FSError(
+                f"The container: {container} does not exist. Please create it first"
+            )
 
     def getinfo(self, path, namespaces=None) -> Info:
         namespaces = namespaces or ()
@@ -63,6 +67,10 @@ class BlobFS(FS):
         mode = Mode(mode)
         return BlobFile(self.client.get_blob_client(path), mode)  # type: ignore
 
+    # def upload(self, path, file, chunk_size=None, **options):
+    #     blob = self.client.get_blob_client(path)
+    #     blob.upload_blob(file.read())
+
     def validatepath(self, path: str) -> str:
         if path == ".":
             path = ""
@@ -74,6 +82,9 @@ class BlobFS(FS):
 
     def remove(self, path) -> None:
         path = self.validatepath(path)
+        blob = self.client.get_blob_client(path)
+        if not blob.exists():
+            raise ResourceNotFound(path)
         self.client.delete_blob(path)
 
     def removedir(self, path) -> None:

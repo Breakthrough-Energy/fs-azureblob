@@ -13,6 +13,7 @@ class BlobFile(io.RawIOBase):
         self.client = client
         self.mode = mode
         self._reader: BlobStreamReader = None  # type: ignore
+        self._writer: BlobWriter = None  # type: ignore
 
     def flush(self) -> None:
         pass
@@ -29,14 +30,30 @@ class BlobFile(io.RawIOBase):
     def seekable(self) -> bool:
         return False
 
+    def close(self) -> None:
+        if not self.closed:
+            if self.writable():
+                self.writer.commit()
+            super().close()
+
     @property
     def reader(self) -> "BlobStreamReader":
+        if not self.readable():
+            raise ValueError("BlobFile must be opened in reading mode")
         if self._reader is None:
             self._reader = BlobStreamReader(self.client.download_blob())
         return self._reader
 
+    @property
+    def writer(self) -> "BlobWriter":
+        if not self.writable:
+            raise ValueError("BlobFile must be opened in writing mode")
+        if self._writer is None:
+            self._writer = BlobWriter(self.client)
+        return self._writer
+
     def write(self, data) -> int:
-        self.client.upload_blob(data)
+        self.writer.write(data)
         return len(data)
 
     def read(self, n: int = -1) -> Bytes:
@@ -85,10 +102,13 @@ class BlobFile(io.RawIOBase):
 class BlobWriter:
     def __init__(self, client) -> None:
         self.client = client
-        self.buf = io.BytesIO()
+        self.buf = bytearray()
 
     def write(self, data):
-        pass
+        self.buf.extend(data)
+
+    def commit(self):
+        self.client.upload_blob(self.buf)
 
 
 class BlobStreamReader:
