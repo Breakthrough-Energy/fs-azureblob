@@ -1,5 +1,6 @@
 import io
 import os
+from contextlib import contextmanager
 
 import pytest
 from azure.storage.blob import BlobClient
@@ -36,6 +37,16 @@ def bfs_rw(account_key):
     return BlobFS(account_name, container, account_key=account_key)
 
 
+@contextmanager
+def new_file(bfs_rw, content):
+    fname = "hello.txt"
+    if bfs_rw.exists(fname):
+        bfs_rw.remove(fname)
+    bfs_rw.upload(fname, io.BytesIO(content))
+    yield fname
+    bfs_rw.remove(fname)
+
+
 def test_listdir(bfs):
     for path in ("", ".", "/", "raw", "raw/test_usa_tamu", "raw/test"):
         print(f"{path=}")
@@ -65,20 +76,15 @@ def test_download(bfs):
 class TestBlobFile:
     @pytest.mark.creds
     def test_readline(self, bfs_rw):
-        fname = "hello.txt"
-        data = io.BytesIO(b"line1\nline2\n")
-        bfs_rw.upload(fname, data)
-
-        bc = BlobClient(url, container, fname)
-        bfile = BlobFile(bc, Mode("r"))
-        line1 = bfile.readline()
-        assert line1 == b"line1\n"
-        line2 = bfile.readline()
-        assert line2 == b"line2\n"
-        line3 = bfile.readline()
-        assert line3 == b""
-
-        bfs_rw.remove(fname)
+        with new_file(bfs_rw, b"line1\nline2\n") as fname:
+            bc = BlobClient(url, container, fname)
+            bfile = BlobFile(bc, Mode("r"))
+            line1 = bfile.readline()
+            assert line1 == b"line1\n"
+            line2 = bfile.readline()
+            assert line2 == b"line2\n"
+            line3 = bfile.readline()
+            assert line3 == b""
 
     def test_open_close(self):
         bc = BlobClient(url, container, "some_file")
@@ -98,16 +104,10 @@ class TestBlobFile:
 
     @pytest.mark.creds
     def test_iterate_lines(self, bfs_rw):
-        fname = "hello.txt"
-        data = io.BytesIO(b"line1\nline2\n\n")
-        bfs_rw.upload(fname, data)
-
-        bc = BlobClient(url, container, fname)
-        bfile = BlobFile(bc, Mode("r"))
-        count = 0
-        for _ in bfile:
-            count += 1
-        assert count == 3
+        with new_file(bfs_rw, b"line1\nline2\n\n") as fname:
+            bc = BlobClient(url, container, fname)
+            bfile = BlobFile(bc, Mode("r"))
+            assert 3 == sum(1 for _ in bfile)
 
 
 class TestOpener:
@@ -128,19 +128,13 @@ class TestOpener:
 @pytest.mark.creds
 class TestUpload:
     def test_create(self, bfs_rw):
-        fname = "hello.txt"
-        data = io.BytesIO(b"hello")
-        bfs_rw.upload(fname, data)
-        assert fname in bfs_rw.listdir(".")
-        bfs_rw.remove(fname)
+        with new_file(bfs_rw, b"hello") as fname:
+            assert fname in bfs_rw.listdir(".")
         assert fname not in bfs_rw.listdir(".")
 
     def test_upload_empty(self, bfs_rw):
-        fname = "empty.txt"
-        data = io.BytesIO(b"")
-        bfs_rw.upload(fname, data)
-        assert fname in bfs_rw.listdir(".")
-        bfs_rw.remove(fname)
+        with new_file(bfs_rw, b"") as fname:
+            assert fname in bfs_rw.listdir(".")
 
     def test_upload_large_file(self, bfs_rw):
         # creates 95 MB file
