@@ -20,6 +20,10 @@ def _convert_to_epoch(props: dict) -> None:
             props[k] = datetime_to_epoch(v)
 
 
+def _basic_info(name: str, is_dir: bool) -> dict:
+    return {"basic": {"name": name, "is_dir": is_dir}}
+
+
 class BlobFS(FS):
     def __init__(self, account_name: str, container: str, account_key=None):
         super().__init__()
@@ -36,10 +40,14 @@ class BlobFS(FS):
     def getinfo(self, path, namespaces=None) -> Info:
         namespaces = namespaces or ()
         path = self.validatepath(path)
+        if path == "":
+            # hack - so makedirs works as expected
+            return Info(_basic_info("/", True))
+
         blob = self.client.get_blob_client(path)
         if not blob.exists():
             raise ResourceNotFound(path)
-        info = {"basic": {"name": basename(path), "is_dir": False}}
+        info = _basic_info(basename(path), False)
         if "details" in namespaces:
             props = blob.get_blob_properties()
             details = {}
@@ -67,9 +75,8 @@ class BlobFS(FS):
         mode = Mode(mode)
         return BlobFile(self.client.get_blob_client(path), mode)  # type: ignore
 
-    # def upload(self, path, file, chunk_size=None, **options):
-    #     blob = self.client.get_blob_client(path)
-    #     blob.upload_blob(file.read())
+    def opendir(self, path, factory=None):
+        return self.makedir(path)
 
     def validatepath(self, path: str) -> str:
         if path == ".":
@@ -78,7 +85,8 @@ class BlobFS(FS):
         return path
 
     def makedir(self, path, permissions=None, recreate=False) -> SubFS:  # type: ignore
-        print("Directories not supported for azblob filesystem")
+        path = self.validatepath(path)
+        return SubFS(self, path)
 
     def remove(self, path) -> None:
         path = self.validatepath(path)

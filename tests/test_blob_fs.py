@@ -73,6 +73,24 @@ def test_download(bfs):
     os.remove(fname)
 
 
+def test_subfs(bfs):
+    # list existing file from 2 locations
+    path = "foo/bar"
+    list1 = bfs.listdir(path)
+    list2 = bfs.opendir(path).listdir(".")
+    assert list1 == list2
+
+
+@pytest.mark.creds
+def test_makedirs(bfs_rw):
+    path = "some/path"
+    sub_fs = bfs_rw.makedirs(path)
+    with new_file(sub_fs, b"whatever") as fname:
+        list1 = sub_fs.listdir(".")
+        list2 = bfs_rw.listdir(path)
+        assert list1 == list2 == [fname]
+
+
 class TestBlobFile:
     @pytest.mark.creds
     def test_readline(self, bfs_rw):
