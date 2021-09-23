@@ -6,6 +6,7 @@ import pytest
 from azure.storage.blob import BlobClient
 from fs.mode import Mode
 
+import fs
 from fs import open_fs
 from fs.azblob import BlobFile, BlobFS
 from fs.opener.blob_fs import BlobFSOpener
@@ -89,6 +90,17 @@ def test_makedirs(bfs_rw):
         list1 = sub_fs.listdir(".")
         list2 = bfs_rw.listdir(path)
         assert list1 == list2 == [fname]
+
+
+@pytest.mark.creds
+def test_copy_fs(account_key):
+    src = BlobFS(account_name, "test", account_key=account_key)
+    dest = BlobFS(account_name, "test2", account_key=account_key)
+    paths = ("foo/bar", "foo")
+    for path in paths:
+        fs.copy.copy_dir(src, path, dest, path)
+        dest.removetree(path)
+        assert len(dest.listdir(".")) == 0
 
 
 class TestBlobFile:

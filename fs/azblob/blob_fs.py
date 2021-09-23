@@ -7,7 +7,7 @@ from fs.enums import ResourceType
 from fs.errors import FSError, PermissionDenied, ResourceNotFound
 from fs.info import Info
 from fs.mode import Mode
-from fs.path import basename
+from fs.path import basename, dirname
 from fs.subfs import SubFS
 from fs.time import datetime_to_epoch
 
@@ -45,9 +45,14 @@ class BlobFS(FS):
             return Info(_basic_info("/", True))
 
         blob = self.client.get_blob_client(path)
+        base_name = basename(path)
         if not blob.exists():
-            raise ResourceNotFound(path)
-        info = _basic_info(basename(path), False)
+            if base_name not in self.listdir(dirname(path)):
+                raise ResourceNotFound(path)
+            return Info(_basic_info(name=base_name, is_dir=True))
+
+        info = _basic_info(name=base_name, is_dir=False)
+
         if "details" in namespaces:
             props = blob.get_blob_properties()
             details = {}
