@@ -139,6 +139,17 @@ class TestBlobFile:
             bfile = BlobFile(bc, Mode("r"))
             assert 3 == sum(1 for _ in bfile)
 
+    @pytest.mark.creds
+    def test_readall(self, bfs_rw):
+        with new_file(bfs_rw, b"line1\nline2\n\n") as fname:
+            bc = BlobClient(url, container, fname)
+            bfile = BlobFile(bc, Mode("r"))
+            line1 = bfile.readline()
+            assert b"line1\n" == line1
+            remaining = bfile.readall()
+            assert line1 not in remaining
+            assert b"line2" in remaining
+
 
 class TestOpener:
     def test_opener(self):
