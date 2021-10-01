@@ -57,21 +57,14 @@ class BlobFile(io.RawIOBase):
         self.writer.write(data)
         return len(data)
 
-    def read(self, n: int = -1) -> Bytes:
-        if n == -1:
-            return self.readall()
-
-        return self.reader.get_bytes(n)
-
-    def readall(self) -> bytes:
-        stream = self.client.download_blob()
-        return stream.content_as_bytes()
-
     @typing.no_type_check
-    def readinto(self, b: bytearray) -> int:
-        before = len(b)
-        b.extend(self.readall())
-        return len(b) - before
+    def readinto(self, b: bytearray) -> Optional[int]:
+        result = self.reader.get_bytes(len(b))
+        if result is None:
+            return None
+        n_bytes = len(result)
+        b[:n_bytes] = result
+        return n_bytes
 
     def readline(self, size: Optional[int] = None) -> bytes:
         result = self.reader.readline()

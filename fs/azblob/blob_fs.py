@@ -72,8 +72,8 @@ class BlobFS(FS):
         parts = path.split("/")
         num_parts = 0 if path == "" else len(parts)
         suffix = parts[-1]
-        all = (b.name.split("/") for b in self.client.list_blobs(path))
-        return list({p[num_parts] for p in all if suffix in p or suffix == ""})
+        _all = (b.name.split("/") for b in self.client.list_blobs(path))
+        return list({p[num_parts] for p in _all if suffix in p or suffix == ""})
 
     def openbin(self, path, mode="r", buffering=-1, **options) -> BinaryIO:
         path = self.validatepath(path)
