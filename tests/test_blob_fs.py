@@ -1,9 +1,11 @@
 import io
 import os
 from contextlib import contextmanager
+from uuid import uuid4
 
 import pytest
 from azure.storage.blob import BlobClient
+from fs.errors import ResourceNotFound
 from fs.mode import Mode
 
 import fs
@@ -72,6 +74,12 @@ def test_download(bfs):
     assert os.path.exists(fname)
     assert os.stat(fname).st_size > 0
     os.remove(fname)
+
+
+def test_download_not_exists(bfs):
+    fname = str(uuid4())
+    with pytest.raises(ResourceNotFound):
+        bfs.download(fname, io.BytesIO())
 
 
 def test_subfs(bfs):

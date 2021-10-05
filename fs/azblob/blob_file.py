@@ -5,6 +5,8 @@ from typing import Iterator, List, Optional
 
 from azure.storage.blob import BlobClient
 
+from fs.azblob.error_tools import blobfs_errors
+
 Bytes = Optional[bytes]
 EMPTY_BYTES = b""
 
@@ -42,7 +44,8 @@ class BlobFile(io.RawIOBase):
         if not self.readable():
             raise ValueError("BlobFile must be opened in reading mode")
         if self._reader is None:
-            self._reader = BlobStreamReader(self.client.download_blob())
+            with blobfs_errors(self.client.blob_name):
+                self._reader = BlobStreamReader(self.client.download_blob())
         return self._reader
 
     @property
