@@ -1,7 +1,7 @@
 import array
 import io
 import typing
-from typing import Iterator, List, Optional
+from typing import Iterator, Optional
 
 from azure.storage.blob import BlobClient
 
@@ -19,25 +19,14 @@ class BlobFile(io.RawIOBase):
         self._writer: BlobWriter = None  # type: ignore
 
     def flush(self) -> None:
-        pass
-
-    def isatty(self) -> bool:
-        return False
+        if self.writable():
+            self.writer.commit()
 
     def readable(self) -> bool:
         return self.mode.reading
 
     def writable(self) -> bool:
         return self.mode.writing
-
-    def seekable(self) -> bool:
-        return False
-
-    def close(self) -> None:
-        if not self.closed:
-            if self.writable():
-                self.writer.commit()
-            super().close()
 
     @property
     def reader(self) -> "BlobStreamReader":
@@ -69,24 +58,10 @@ class BlobFile(io.RawIOBase):
         b[:n_bytes] = result
         return n_bytes
 
-    def readline(self, size: Optional[int] = None) -> bytes:
-        result = self.reader.readline()
-        if size == -1 or result == EMPTY_BYTES:
-            return result
-        return result[:size]
-
-    def readlines(self, hint: Optional[int] = None) -> List[bytes]:
-        def _is_complete(lines, hint):
-            if hint is None or hint <= 0:
-                return False
-            return len(lines) == hint
-
-        result = []
-        while len(line := self.reader.readline()) > 0:
-            result.append(line)
-            if _is_complete(result, hint):
-                break
-        return result
+    def readline(self, size: Optional[int] = -1) -> bytes:
+        if size is None or size < 0:
+            size = -1
+        return self.reader.readline(size)
 
     def writelines(self, lines) -> None:
         for line in lines:
@@ -122,7 +97,7 @@ class BlobStreamReader:
         self.leftover = bytearray()
         self.eof = False
 
-    def readline(self) -> bytes:
+    def readline(self, size: int = -1) -> bytes:
         newline = b"\n"
         if self.eof:
             return EMPTY_BYTES
@@ -132,8 +107,14 @@ class BlobStreamReader:
             except StopIteration:
                 self.eof = True
                 return bytes(self.leftover)
-        curr, _, self.leftover = self.leftover.partition(newline)
-        return bytes(curr) + newline
+        idx_linebreak = self.leftover.find(newline)
+        n = None
+        if size != -1 and idx_linebreak > size:
+            n = size
+        else:
+            n = idx_linebreak + 1
+        curr, self.leftover = self.leftover[:n], self.leftover[n:]
+        return bytes(curr)
 
     def get_bytes(self, size: int) -> Bytes:
         if self.eof:

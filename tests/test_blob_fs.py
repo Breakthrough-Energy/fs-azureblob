@@ -117,12 +117,24 @@ class TestBlobFile:
         with new_file(bfs_rw, b"line1\nline2\n") as fname:
             bc = BlobClient(url, container, fname)
             bfile = BlobFile(bc, Mode("r"))
-            line1 = bfile.readline()
-            assert line1 == b"line1\n"
-            line2 = bfile.readline()
-            assert line2 == b"line2\n"
-            line3 = bfile.readline()
-            assert line3 == b""
+            line = bfile.readline()
+            assert line == b"line1\n"
+            line = bfile.readline()
+            assert line == b"line2\n"
+            line = bfile.readline()
+            assert line == b""
+
+    @pytest.mark.creds
+    def test_readline_with_limit(self, bfs_rw):
+        with new_file(bfs_rw, b"line1\nline2") as fname:
+            bc = BlobClient(url, container, fname)
+            bfile = BlobFile(bc, Mode("r"))
+            line = bfile.readline(3)
+            assert line == b"lin"
+            line = bfile.readline(4)
+            assert line == b"e1\n"
+            line = bfile.readline()
+            assert line == b"line2"
 
     def test_open_close(self):
         bc = BlobClient(url, container, "some_file")
