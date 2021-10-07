@@ -1,5 +1,5 @@
 import datetime
-from typing import BinaryIO
+from typing import Any, BinaryIO
 
 from azure.storage.blob import ContainerClient
 from fs.base import FS
@@ -37,7 +37,7 @@ class BlobFS(FS):
                 f"The container: {container} does not exist. Please create it first"
             )
 
-    def getinfo(self, path, namespaces=None) -> Info:
+    def getinfo(self, path: str, namespaces=None) -> Info:
         namespaces = namespaces or ()
         path = self.validatepath(path)
         if path == "":
@@ -67,7 +67,7 @@ class BlobFS(FS):
             info["details"] = details
         return Info(info)
 
-    def listdir(self, path) -> list:
+    def listdir(self, path: str) -> list:
         path = self.validatepath(path)
         parts = path.split("/")
         num_parts = 0 if path == "" else len(parts)
@@ -75,12 +75,14 @@ class BlobFS(FS):
         _all = (b.name.split("/") for b in self.client.list_blobs(path))
         return list({p[num_parts] for p in _all if suffix in p or suffix == ""})
 
-    def openbin(self, path, mode="r", buffering=-1, **options) -> BinaryIO:
+    def openbin(
+        self, path: str, mode: str = "r", buffering: int = -1, **options: Any
+    ) -> BinaryIO:
         path = self.validatepath(path)
-        mode = Mode(mode)
-        return BlobFile(self.client.get_blob_client(path), mode)  # type: ignore
+        _mode = Mode(mode)
+        return BlobFile(self.client.get_blob_client(path), _mode)  # type: ignore
 
-    def opendir(self, path, factory=None):
+    def opendir(self, path: str, factory=None):
         return self.makedir(path)
 
     def validatepath(self, path: str) -> str:
@@ -89,19 +91,19 @@ class BlobFS(FS):
         path = path.strip("/")
         return path
 
-    def makedir(self, path, permissions=None, recreate=False) -> SubFS:  # type: ignore
+    def makedir(self, path: str, permissions=None, recreate: bool = False) -> SubFS:  # type: ignore
         path = self.validatepath(path)
         return SubFS(self, path)
 
-    def remove(self, path) -> None:
+    def remove(self, path: str) -> None:
         path = self.validatepath(path)
         blob = self.client.get_blob_client(path)
         if not blob.exists():
             raise ResourceNotFound(path)
         self.client.delete_blob(path)
 
-    def removedir(self, path) -> None:
+    def removedir(self, path: str) -> None:
         print("Directories not supported for azblob filesystem")
 
-    def setinfo(self, path, info) -> None:
+    def setinfo(self, path: str, info) -> None:
         raise PermissionDenied
