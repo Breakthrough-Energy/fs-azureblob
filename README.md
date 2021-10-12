@@ -1,3 +1,13 @@
+[![made-with-python](https://img.shields.io/badge/Made%20with-Python-1f425f.svg)](https://www.python.org/)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+![Tests](https://github.com/Breakthrough-Energy/fs-azureblob/workflows/Tests/badge.svg)
+![GitHub contributors](https://img.shields.io/github/contributors/Breakthrough-Energy/fs-azureblob?logo=GitHub)
+![GitHub commit activity](https://img.shields.io/github/commit-activity/m/Breakthrough-Energy/fs-azureblob?logo=GitHub)
+![GitHub last commit (branch)](https://img.shields.io/github/last-commit/Breakthrough-Energy/fs-azureblob/main?logo=GitHub)
+![GitHub pull requests](https://img.shields.io/github/issues-pr/Breakthrough-Energy/fs-azureblob?logo=GitHub)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Code of Conduct](https://img.shields.io/badge/code%20of-conduct-ff69b4.svg?style=flat)](https://breakthrough-energy.github.io/docs/communication/code_of_conduct.html)
+
 # fs-azureblob
 
 
