@@ -5,11 +5,10 @@ from uuid import uuid4
 
 import pytest
 from azure.storage.blob import BlobClient
-from fs.errors import ResourceNotFound
 from fs.mode import Mode
 
 import fs
-from fs import open_fs
+from fs import errors, open_fs
 from fs.azblob import BlobFile, BlobFS
 from fs.opener.blob_fs import BlobFSOpener
 from fs.opener.parse import parse_fs_url
@@ -78,7 +77,7 @@ def test_download(bfs):
 
 def test_download_not_exists(bfs):
     fname = str(uuid4())
-    with pytest.raises(ResourceNotFound):
+    with pytest.raises(errors.ResourceNotFound):
         bfs.download(fname, io.BytesIO())
 
 
@@ -184,6 +183,11 @@ class TestOpener:
         print(parse_fs_url(url))
         bfs = open_fs(url)
         assert isinstance(bfs, BlobFS)
+
+    def test_opener_error(self):
+        url = f"azblob://{account_name}@{str(uuid4())}"
+        with pytest.raises(errors.FSError):
+            open_fs(url)
 
 
 @pytest.mark.creds

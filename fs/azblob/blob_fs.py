@@ -32,10 +32,18 @@ class BlobFS(FS):
             container_name=container,
             credential=account_key,
         )
-        if not self.client.exists():
-            raise FSError(
-                f"The container: {container} does not exist. Please create it first"
-            )
+        self._check_container_exists(container)
+
+    def _check_container_exists(self, container):
+        try:
+            if self.client.exists():
+                return
+        except:  # noqa
+            # if no credentials are provided, the check raises an auth error
+            pass
+        raise FSError(
+            f"The container: {container} does not exist. Please create it first"
+        )
 
     def getinfo(self, path: str, namespaces=None) -> Info:
         namespaces = namespaces or ()
