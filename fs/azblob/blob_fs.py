@@ -1,4 +1,5 @@
 import datetime
+import logging
 from typing import Any, BinaryIO
 
 from azure.storage.blob import ContainerClient
@@ -12,6 +13,9 @@ from fs.subfs import SubFS
 from fs.time import datetime_to_epoch
 
 from fs.azblob.blob_file import BlobFile
+from fs.azblob.error_tools import blobfs_errors
+
+logger = logging.getLogger(__name__)
 
 
 def _convert_to_epoch(props: dict) -> None:
@@ -32,10 +36,18 @@ class BlobFS(FS):
             container_name=container,
             credential=account_key,
         )
-        if not self.client.exists():
-            raise FSError(
-                f"The container: {container} does not exist. Please create it first"
-            )
+        self._check_container_client()
+
+    def _check_container_client(self):
+        try:
+            if self.client.exists():
+                return
+        except:  # noqa
+            # if no credentials are provided, the check raises an auth error
+            pass
+        raise FSError(
+            "Invalid parameters. Either incorrect account details, or container does not exist"
+        )
 
     def getinfo(self, path: str, namespaces=None) -> Info:
         namespaces = namespaces or ()
@@ -72,8 +84,9 @@ class BlobFS(FS):
         parts = path.split("/")
         num_parts = 0 if path == "" else len(parts)
         suffix = parts[-1]
-        _all = (b.name.split("/") for b in self.client.list_blobs(path))
-        return list({p[num_parts] for p in _all if suffix in p or suffix == ""})
+        with blobfs_errors(path):
+            _all = (b.name.split("/") for b in self.client.list_blobs(path))
+            return list({p[num_parts] for p in _all if suffix in p or suffix == ""})
 
     def openbin(
         self, path: str, mode: str = "r", buffering: int = -1, **options: Any
@@ -97,13 +110,11 @@ class BlobFS(FS):
 
     def remove(self, path: str) -> None:
         path = self.validatepath(path)
-        blob = self.client.get_blob_client(path)
-        if not blob.exists():
-            raise ResourceNotFound(path)
-        self.client.delete_blob(path)
+        with blobfs_errors(path):
+            self.client.delete_blob(path)
 
     def removedir(self, path: str) -> None:
-        print("Directories not supported for azblob filesystem")
+        logger.warning("Directories not supported for azblob filesystem")
 
     def setinfo(self, path: str, info) -> None:
         raise PermissionDenied

@@ -5,11 +5,10 @@ from uuid import uuid4
 
 import pytest
 from azure.storage.blob import BlobClient
-from fs.errors import ResourceNotFound
 from fs.mode import Mode
 
 import fs
-from fs import open_fs
+from fs import errors, open_fs
 from fs.azblob import BlobFile, BlobFS
 from fs.opener.blob_fs import BlobFSOpener
 from fs.opener.parse import parse_fs_url
@@ -78,7 +77,7 @@ def test_download(bfs):
 
 def test_download_not_exists(bfs):
     fname = str(uuid4())
-    with pytest.raises(ResourceNotFound):
+    with pytest.raises(errors.ResourceNotFound):
         bfs.download(fname, io.BytesIO())
 
 
@@ -88,6 +87,12 @@ def test_subfs(bfs):
     list1 = bfs.listdir(path)
     list2 = bfs.opendir(path).listdir(".")
     assert list1 == list2
+
+
+@pytest.mark.creds
+def test_remove_not_found(bfs_rw):
+    with pytest.raises(errors.ResourceNotFound):
+        bfs_rw.remove(str(uuid4()))
 
 
 @pytest.mark.creds
@@ -185,6 +190,16 @@ class TestOpener:
         bfs = open_fs(url)
         assert isinstance(bfs, BlobFS)
 
+    def test_opener_error_wrong_container(self):
+        url = f"azblob://{account_name}@{str(uuid4())}"
+        with pytest.raises(errors.FSError):
+            open_fs(url)
+
+    def test_opener_error_wrong_key(self):
+        url = f"azblob://{account_name}:asdf@{container}"
+        with pytest.raises(errors.FSError):
+            open_fs(url)
+
 
 @pytest.mark.creds
 class TestUpload:
@@ -197,6 +212,7 @@ class TestUpload:
         with new_file(bfs_rw, b"") as fname:
             assert fname in bfs_rw.listdir(".")
 
+    @pytest.mark.skip
     def test_upload_large_file(self, bfs_rw):
         # creates 95 MB file
         fname = "big.txt"
