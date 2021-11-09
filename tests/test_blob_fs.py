@@ -212,6 +212,13 @@ class TestUpload:
         with new_file(bfs_rw, b"") as fname:
             assert fname in bfs_rw.listdir(".")
 
+    def test_upload_overwrite(self, bfs_rw):
+        fname = "duplicate.txt"
+        bfs_rw.upload(fname, io.BytesIO(b"foo"))
+        bfs_rw.upload(fname, io.BytesIO(b"bar"))
+        assert b"bar" == bfs_rw.getbytes(fname)
+        bfs_rw.remove(fname)
+
     @pytest.mark.skip
     def test_upload_large_file(self, bfs_rw):
         # creates 95 MB file
