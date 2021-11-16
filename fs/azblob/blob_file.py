@@ -1,4 +1,3 @@
-import array
 import io
 import typing
 from typing import Iterator, Optional
@@ -63,12 +62,6 @@ class BlobFile(io.RawIOBase):
         if size is None or size < 0:
             size = -1
         return self.reader.readline(size)
-
-    def writelines(self, lines) -> None:
-        for line in lines:
-            if isinstance(line, array.array):
-                line = line.tobytes()
-            self.writer.write(line + b"\n")
 
     def __next__(self) -> bytes:
         line = self.readline()
