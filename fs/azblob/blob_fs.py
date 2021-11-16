@@ -5,7 +5,7 @@ from typing import Any, BinaryIO
 from azure.storage.blob import ContainerClient
 from fs.base import FS
 from fs.enums import ResourceType
-from fs.errors import FSError, PermissionDenied, ResourceNotFound
+from fs.errors import FSError, ResourceNotFound
 from fs.info import Info
 from fs.mode import Mode
 from fs.path import basename, dirname
@@ -123,4 +123,14 @@ class BlobFS(FS):
         logger.warning("Directories not supported for azblob filesystem")
 
     def setinfo(self, path: str, info) -> None:
-        raise PermissionDenied
+        self.check()
+        path = self.validatepath(path)
+        with blobfs_errors(path):
+            blob = self.client.get_blob_client(path)
+            if "details" in info:
+                details = info["details"]
+                meta = {
+                    "last_accessed_on": str(details["accessed"]),
+                    "last_modified": str(details["modified"]),
+                }
+                blob.set_blob_metadata(meta)
