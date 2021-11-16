@@ -50,6 +50,7 @@ class BlobFS(FS):
         )
 
     def getinfo(self, path: str, namespaces=None) -> Info:
+        self.check()
         namespaces = namespaces or ()
         path = self.validatepath(path)
         if path == "":
@@ -80,6 +81,7 @@ class BlobFS(FS):
         return Info(info)
 
     def listdir(self, path: str) -> list:
+        self.check()
         path = self.validatepath(path)
         parts = path.split("/")
         num_parts = 0 if path == "" else len(parts)
@@ -91,6 +93,7 @@ class BlobFS(FS):
     def openbin(
         self, path: str, mode: str = "r", buffering: int = -1, **options: Any
     ) -> BinaryIO:
+        self.check()
         path = self.validatepath(path)
         _mode = Mode(mode)
         return BlobFile(self.client.get_blob_client(path), _mode)  # type: ignore
@@ -105,15 +108,18 @@ class BlobFS(FS):
         return path
 
     def makedir(self, path: str, permissions=None, recreate: bool = False) -> SubFS:  # type: ignore
+        self.check()
         path = self.validatepath(path)
         return SubFS(self, path)
 
     def remove(self, path: str) -> None:
+        self.check()
         path = self.validatepath(path)
         with blobfs_errors(path):
             self.client.delete_blob(path)
 
     def removedir(self, path: str) -> None:
+        self.check()
         logger.warning("Directories not supported for azblob filesystem")
 
     def setinfo(self, path: str, info) -> None:
