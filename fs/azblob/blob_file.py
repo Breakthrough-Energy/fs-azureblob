@@ -17,11 +17,13 @@ class BlobFile(io.RawIOBase):
         self.mode = mode
         self._reader: BlobStreamReader = None  # type: ignore
         self._writer: BlobWriter = None  # type: ignore
+        self._closed = False
 
     def flush(self) -> None:
-        if self.writable():
+        if not self._closed and self.writable():
             with blobfs_errors(self.client.blob_name):
                 self.writer.commit()
+                self._closed = True
 
     def readable(self) -> bool:
         return self.mode.reading
@@ -31,8 +33,6 @@ class BlobFile(io.RawIOBase):
 
     @property
     def reader(self) -> "BlobStreamReader":
-        if not self.readable():
-            raise ValueError("BlobFile must be opened in reading mode")
         if self._reader is None:
             with blobfs_errors(self.client.blob_name):
                 self._reader = BlobStreamReader(self.client.download_blob())
@@ -43,7 +43,7 @@ class BlobFile(io.RawIOBase):
         if not self.writable():
             raise ValueError("BlobFile must be opened in writing mode")
         if self._writer is None:
-            self._writer = BlobWriter(self.client)
+            self._writer = BlobWriter(self.mode, self.client, self.readall)
         return self._writer
 
     def write(self, data) -> int:
@@ -81,15 +81,25 @@ class BlobFile(io.RawIOBase):
 
 
 class BlobWriter:
-    def __init__(self, client) -> None:
+    def __init__(self, mode, client, download) -> None:
         self.client = client
+        self.mode = mode
+        self._download = download
         self.buf = bytearray()
 
     def write(self, data):
         self.buf.extend(data)
 
     def commit(self):
-        self.client.upload_blob(bytes(self.buf), overwrite=True)
+        if not self.client.exists():
+            content = EMPTY_BYTES
+        elif self.mode.appending:
+            content = self._download()
+        else:
+            content = EMPTY_BYTES
+
+        content = content + bytes(self.buf)
+        self.client.upload_blob(content, overwrite=True)
 
 
 class BlobStreamReader:

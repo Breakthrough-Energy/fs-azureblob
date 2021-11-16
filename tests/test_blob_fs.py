@@ -147,16 +147,6 @@ class TestBlobFile:
             assert not bfile.closed
         assert bfile.closed
 
-    def test_validate_mode(self):
-        bc = BlobClient(url, container, "some_file")
-        with BlobFile(bc, Mode("r")) as bfile:
-            with pytest.raises(ValueError):
-                _ = bfile.writer
-
-        # with BlobFile(bc, Mode("w")) as bfile:
-        #     with pytest.raises(ValueError):
-        #         _ = bfile.reader
-
     @pytest.mark.creds
     def test_iterate_lines(self, bfs_rw):
         with new_file(bfs_rw, b"line1\nline2\n\n") as fname:
