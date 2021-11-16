@@ -125,12 +125,14 @@ class BlobFS(FS):
     def setinfo(self, path: str, info) -> None:
         self.check()
         path = self.validatepath(path)
-        with blobfs_errors(path):
-            blob = self.client.get_blob_client(path)
-            if "details" in info:
-                details = info["details"]
-                meta = {
-                    "last_accessed_on": str(details["accessed"]),
-                    "last_modified": str(details["modified"]),
-                }
+        if not self.exists(path):
+            raise ResourceNotFound(path)
+        if "details" in info:
+            details = info["details"]
+            meta = {
+                "last_accessed_on": str(details["accessed"]),
+                "last_modified": str(details["modified"]),
+            }
+            with blobfs_errors(path):
+                blob = self.client.get_blob_client(path)
                 blob.set_blob_metadata(meta)
