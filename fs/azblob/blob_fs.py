@@ -5,13 +5,13 @@ from typing import Any, BinaryIO
 from azure.storage.blob import ContainerClient
 from fs.base import FS
 from fs.enums import ResourceType
-from fs.errors import FSError, ResourceNotFound
 from fs.info import Info
 from fs.mode import Mode
 from fs.path import basename, dirname
 from fs.subfs import SubFS
 from fs.time import datetime_to_epoch
 
+from fs import errors
 from fs.azblob.blob_file import BlobFile
 from fs.azblob.error_tools import blobfs_errors
 
@@ -45,7 +45,7 @@ class BlobFS(FS):
         except:  # noqa
             # if no credentials are provided, the check raises an auth error
             pass
-        raise FSError(
+        raise errors.FSError(
             "Invalid parameters. Either incorrect account details, or container does not exist"
         )
 
@@ -61,7 +61,7 @@ class BlobFS(FS):
         base_name = basename(path)
         if not blob.exists():
             if base_name not in self.listdir(dirname(path)):
-                raise ResourceNotFound(path)
+                raise errors.ResourceNotFound(path)
             return Info(_basic_info(name=base_name, is_dir=True))
 
         info = _basic_info(name=base_name, is_dir=False)
@@ -96,6 +96,21 @@ class BlobFS(FS):
         self.check()
         path = self.validatepath(path)
         _mode = Mode(mode)
+        _mode.validate_bin()
+
+        # try:
+        #     dir_path = dirname(path)
+        #     self.getinfo(dir_path)
+        # except errors.ResourceNotFound:
+        #     raise errors.ResourceNotFound(path)
+        try:
+            info = self.getinfo(path)
+            if _mode.exclusive:
+                raise errors.FileExists(path)
+            if info.is_dir:
+                raise errors.FileExpected(path)
+        except errors.ResourceNotFound:
+            pass
         return BlobFile(self.client.get_blob_client(path), _mode)  # type: ignore
 
     def opendir(self, path: str, factory=None):
@@ -104,8 +119,7 @@ class BlobFS(FS):
     def validatepath(self, path: str) -> str:
         if path == ".":
             path = ""
-        path = path.strip("/")
-        return path
+        return path.strip("/")
 
     def makedir(self, path: str, permissions=None, recreate: bool = False) -> SubFS:  # type: ignore
         self.check()
@@ -126,7 +140,7 @@ class BlobFS(FS):
         self.check()
         path = self.validatepath(path)
         if not self.exists(path):
-            raise ResourceNotFound(path)
+            raise errors.ResourceNotFound(path)
         if "details" in info:
             details = info["details"]
             meta = {

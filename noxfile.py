@@ -1,3 +1,5 @@
+import os
+
 import nox
 
 nox.options.sessions = ["lint", "test", "mypy", "pytype"]
@@ -8,7 +10,11 @@ locations = ["fs", "tests", "noxfile.py"]
 def test(session):
     session.install("pytest")
     session.install(".")
-    session.run("pytest", "-m", "not creds")
+    key = os.getenv("BLOB_ACCOUNT_KEY")
+    if key is None:
+        session.run("pytest", "-m", "not creds")
+    else:
+        session.run("pytest")
 
 
 @nox.session
