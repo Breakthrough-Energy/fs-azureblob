@@ -96,22 +96,29 @@ class BlobFS(FS):
         self.check()
         path = self.validatepath(path)
         _mode = Mode(mode)
-        _mode.validate_bin()
 
-        # try:
-        #     dir_path = dirname(path)
-        #     self.getinfo(dir_path)
-        # except errors.ResourceNotFound:
-        #     raise errors.ResourceNotFound(path)
+        self._check_mode(path, _mode)
+        # self._check_dir_path(path)
+        return BlobFile(self.client.get_blob_client(path), _mode)  # type: ignore
+
+    def _check_dir_path(self, path):
+        try:
+            dir_path = dirname(path)
+            self.getinfo(dir_path)
+        except errors.ResourceNotFound:
+            raise errors.ResourceNotFound(path)
+
+    def _check_mode(self, path, mode):
+        mode.validate_bin()
         try:
             info = self.getinfo(path)
-            if _mode.exclusive:
+            if mode.exclusive:
                 raise errors.FileExists(path)
             if info.is_dir:
                 raise errors.FileExpected(path)
         except errors.ResourceNotFound:
-            pass
-        return BlobFile(self.client.get_blob_client(path), _mode)  # type: ignore
+            if not mode.create:
+                raise errors.ResourceNotFound(path)
 
     def opendir(self, path: str, factory=None):
         return self.makedir(path)
