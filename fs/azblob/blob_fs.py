@@ -141,7 +141,14 @@ class BlobFS(FS):
 
     def removedir(self, path: str) -> None:
         self.check()
-        logger.warning("Directories not supported for azblob filesystem")
+        _path = self.validatepath(path)
+        if _path == "":
+            raise errors.RemoveRootError()
+        info = self.getinfo(_path)
+        if not info.is_dir:
+            raise errors.DirectoryExpected(path)
+        if not self.isempty(path):
+            raise errors.DirectoryNotEmpty(path)
 
     def setinfo(self, path: str, info) -> None:
         self.check()
