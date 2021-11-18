@@ -17,6 +17,8 @@ from fs.azblob.error_tools import blobfs_errors
 
 logger = logging.getLogger(__name__)
 
+DIR_ENTRY = ".fs_azblob"
+
 
 def _convert_to_epoch(props: dict) -> None:
     for k, v in props.items():
@@ -88,7 +90,8 @@ class BlobFS(FS):
         suffix = parts[-1]
         with blobfs_errors(path):
             _all = (b.name.split("/") for b in self.client.list_blobs(path))
-            return list({p[num_parts] for p in _all if suffix in p or suffix == ""})
+            _all = (p[num_parts] for p in _all if suffix in p or suffix == "")
+            return [a for a in _all if a != DIR_ENTRY]
 
     def openbin(
         self, path: str, mode: str = "r", buffering: int = -1, **options: Any
@@ -120,9 +123,6 @@ class BlobFS(FS):
             if not mode.create:
                 raise errors.ResourceNotFound(path)
 
-    def opendir(self, path: str, factory=None):
-        return self.makedir(path)
-
     def validatepath(self, path: str) -> str:
         if path == ".":
             path = ""
@@ -131,6 +131,7 @@ class BlobFS(FS):
     def makedir(self, path: str, permissions=None, recreate: bool = False) -> SubFS:  # type: ignore
         self.check()
         path = self.validatepath(path)
+        self.touch(path + "/" + DIR_ENTRY)
         return SubFS(self, path)
 
     def remove(self, path: str) -> None:
@@ -149,6 +150,7 @@ class BlobFS(FS):
             raise errors.DirectoryExpected(path)
         if not self.isempty(path):
             raise errors.DirectoryNotEmpty(path)
+        self.remove(path + "/" + DIR_ENTRY)
 
     def setinfo(self, path: str, info) -> None:
         self.check()

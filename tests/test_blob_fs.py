@@ -103,6 +103,7 @@ def test_makedirs(bfs_rw):
         list1 = sub_fs.listdir(".")
         list2 = bfs_rw.listdir(path)
         assert list1 == list2 == [fname]
+    bfs_rw.removetree(path)
 
 
 @pytest.mark.creds
@@ -206,7 +207,7 @@ class TestUpload:
         fname = "duplicate.txt"
         bfs_rw.upload(fname, io.BytesIO(b"foo"))
         bfs_rw.upload(fname, io.BytesIO(b"bar"))
-        assert b"bar" == bfs_rw.getbytes(fname)
+        assert b"bar" == bfs_rw.readbytes(fname)
         bfs_rw.remove(fname)
 
     @pytest.mark.skip
