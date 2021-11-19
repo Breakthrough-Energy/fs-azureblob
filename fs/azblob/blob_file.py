@@ -1,6 +1,6 @@
 import io
 import typing
-from typing import Iterator, Optional
+from typing import Optional
 
 from azure.storage.blob import BlobClient
 
@@ -58,20 +58,6 @@ class BlobFile(io.RawIOBase):
         b[:n_bytes] = result
         return n_bytes
 
-    def readline(self, size: Optional[int] = -1) -> bytes:
-        if size is None or size < 0:
-            size = -1
-        return self.reader.readline(size)
-
-    def __next__(self) -> bytes:
-        line = self.readline()
-        if line == EMPTY_BYTES:
-            raise StopIteration
-        return line
-
-    def __iter__(self) -> Iterator[bytes]:
-        return self
-
 
 class BlobWriter:
     def __init__(self, mode, client, download) -> None:
@@ -121,15 +107,13 @@ class BlobStreamReader:
         return bytes(curr)
 
     def get_bytes(self, size: int) -> Bytes:
-        if self.eof:
-            return None
         n = size
-        while len(self.leftover) < n:
-            try:
-                self.leftover.extend(next(self.chunks))
-            except StopIteration:
-                self.eof = True
-                return bytes(self.leftover)
+        if not self.eof:
+            while len(self.leftover) < n:
+                try:
+                    self.leftover.extend(next(self.chunks))
+                except StopIteration:
+                    self.eof = True
+                    break
         curr, self.leftover = self.leftover[:n], self.leftover[n:]
-        assert len(curr) == n
         return bytes(curr)
