@@ -30,6 +30,17 @@ def _basic_info(name: str, is_dir: bool) -> dict:
     return {"basic": {"name": name, "is_dir": is_dir}}
 
 
+def _info_from_dict(info, namespaces):
+    if "details" in namespaces:
+        if "details" not in info:
+            info["details"] = {}
+        if info["basic"]["is_dir"]:
+            info["details"]["type"] = ResourceType.directory
+        else:
+            info["details"]["type"] = ResourceType.file
+    return Info(info)
+
+
 class BlobFS(FS):
     def __init__(self, account_name: str, container: str, account_key=None):
         super().__init__()
@@ -57,17 +68,18 @@ class BlobFS(FS):
         path = self.validatepath(path)
         if path == "":
             # hack - so makedirs works as expected
-            return Info(_basic_info("/", True))
+            info = _basic_info("/", is_dir=True)
+            return _info_from_dict(info, namespaces)
 
         blob = self.client.get_blob_client(path)
         base_name = basename(path)
         if not blob.exists():
             if base_name not in self.listdir(dirname(path)):
                 raise errors.ResourceNotFound(path)
-            return Info(_basic_info(name=base_name, is_dir=True))
+            info = _basic_info(name=base_name, is_dir=True)
+            return _info_from_dict(info, namespaces)
 
         info = _basic_info(name=base_name, is_dir=False)
-
         if "details" in namespaces:
             props = blob.get_blob_properties()
             details = {}
@@ -76,11 +88,10 @@ class BlobFS(FS):
             details["metadata_changed"] = None
             details["modified"] = props["last_modified"]
             details["size"] = props["size"]
-            details["type"] = ResourceType.file
             _convert_to_epoch(details)
-
             info["details"] = details
-        return Info(info)
+
+        return _info_from_dict(info, namespaces)
 
     def listdir(self, path: str) -> list:
         self.check()
