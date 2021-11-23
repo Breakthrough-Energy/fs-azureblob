@@ -124,6 +124,7 @@ class BlobFS(FS):
 
     def _check_mode(self, path, mode):
         mode.validate_bin()
+        # mode = mode.to_platform_bin()
         try:
             info = self.getinfo(path)
             if mode.exclusive:
@@ -139,9 +140,17 @@ class BlobFS(FS):
             path = ""
         return path.strip("/")
 
+    def _check_makedir(self, path, recreate):
+        if not self.isdir(dirname(path)):
+            raise errors.ResourceNotFound(path)
+        if not recreate:
+            if path == "" or self.exists(path):
+                raise errors.DirectoryExists(path)
+
     def makedir(self, path: str, permissions=None, recreate: bool = False) -> SubFS:  # type: ignore
         self.check()
         path = self.validatepath(path)
+        self._check_makedir(path, recreate)
         self.touch(path + "/" + DIR_ENTRY)
         return SubFS(self, path)
 
