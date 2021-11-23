@@ -96,6 +96,8 @@ class BlobFS(FS):
     def listdir(self, path: str) -> list:
         self.check()
         path = self.validatepath(path)
+        if not self.getinfo(path).is_dir:
+            raise errors.DirectoryExpected(path)
         parts = path.split("/")
         num_parts = 0 if path == "" else len(parts)
         suffix = parts[-1]

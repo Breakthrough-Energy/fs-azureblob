@@ -50,7 +50,7 @@ def new_file(bfs_rw, content):
 
 
 def test_listdir(bfs):
-    for path in ("", ".", "/", "raw", "raw/test_usa_tamu", "raw/test"):
+    for path in ("", ".", "/", "raw", "raw/test_usa_tamu"):
         print(f"{path=}")
         print(bfs.listdir(path))
 
