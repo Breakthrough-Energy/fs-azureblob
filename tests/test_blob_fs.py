@@ -110,11 +110,12 @@ def test_makedirs(bfs_rw):
 def test_copy_fs(account_key):
     src = BlobFS(account_name, "test", account_key=account_key)
     dest = BlobFS(account_name, "test2", account_key=account_key)
-    paths = ("foo/bar", "foo")
-    for path in paths:
-        fs.copy.copy_dir(src, path, dest, path)
-        dest.removetree(path)
-        assert len(dest.listdir(".")) == 0
+    path = "foo/bar"
+    fs.copy.copy_dir(src, path, dest, path)
+    assert "foo" in dest.listdir(".")
+    assert "bar" in dest.listdir("foo")
+    dest.removetree(".")
+    assert len(dest.listdir(".")) == 0
 
 
 class TestBlobFile:

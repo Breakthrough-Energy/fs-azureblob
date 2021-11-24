@@ -7,7 +7,7 @@ from fs.base import FS
 from fs.enums import ResourceType
 from fs.info import Info
 from fs.mode import Mode
-from fs.path import basename, dirname
+from fs.path import abspath, basename, dirname, normpath
 from fs.subfs import SubFS
 from fs.time import datetime_to_epoch
 
@@ -138,8 +138,7 @@ class BlobFS(FS):
                 raise errors.ResourceNotFound(path)
 
     def validatepath(self, path: str) -> str:
-        if path == ".":
-            path = ""
+        path = abspath(normpath(path))
         return path.strip("/")
 
     def _check_makedir(self, path, recreate):
