@@ -1,5 +1,6 @@
 import datetime
 import logging
+import os
 from typing import Any, BinaryIO
 
 from azure.storage.blob import ContainerClient
@@ -115,7 +116,20 @@ class BlobFS(FS):
 
         self._check_mode(path, _mode)
         # self._check_dir_path(path)
-        return BlobFile(self.client.get_blob_client(path), _mode)  # type: ignore
+        blob = self.client.get_blob_client(path)
+        blob_file = BlobFile.factory(blob, _mode)
+        if _mode.create:
+            return blob_file
+
+        with blobfs_errors(path):
+            stream = blob.download_blob()
+            stream.readinto(blob_file.raw)
+
+        if _mode.appending:
+            blob_file.seek(0, os.SEEK_END)
+        else:
+            blob_file.seek(0)
+        return blob_file  # type: ignore
 
     def _check_dir_path(self, path):
         try:

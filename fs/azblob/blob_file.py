@@ -1,119 +1,101 @@
 import io
-import typing
-from typing import Optional
-
-from azure.storage.blob import BlobClient
-
-from fs.azblob.error_tools import blobfs_errors
-
-Bytes = Optional[bytes]
-EMPTY_BYTES = b""
+import os
+import tempfile
 
 
-class BlobFile(io.RawIOBase):
-    def __init__(self, client: BlobClient, mode=None):
-        self.client = client
-        self.mode = mode
-        self._reader: BlobStreamReader = None  # type: ignore
-        self._writer: BlobWriter = None  # type: ignore
-        self._closed = False
+class BlobFile(io.IOBase):
+    """Proxy for a blob file."""
 
-    def flush(self) -> None:
-        if not self._closed and self.writable():
-            with blobfs_errors(self.client.blob_name):
-                self.writer.commit()
-                self._closed = True
+    @classmethod
+    def factory(cls, blob, mode):
+        """Create a BlobFile backed with a temporary file."""
+        _temp_file = tempfile.TemporaryFile()
+        proxy = cls(_temp_file, blob, mode)
+        return proxy
 
-    def readable(self) -> bool:
-        return self.mode.reading
+    def __repr__(self):
+        return f"BlobFile({self.blob.blob_name}, {self._mode})"
 
-    def writable(self) -> bool:
-        return self.mode.writing
+    def __init__(self, f, blob, mode):
+        self._f = f
+        self.blob = blob
+        self._mode = mode
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
 
     @property
-    def reader(self) -> "BlobStreamReader":
-        if self._reader is None:
-            with blobfs_errors(self.client.blob_name):
-                self._reader = BlobStreamReader(self.client.download_blob())
-        return self._reader
+    def raw(self):
+        return self._f
+
+    def close(self):
+        if self._mode.writing:
+            self.seek(os.SEEK_SET)
+            self.blob.upload_blob(self.raw, overwrite=True)
+        self._f.close()
 
     @property
-    def writer(self) -> "BlobWriter":
-        if not self.writable():
-            raise ValueError("BlobFile must be opened in writing mode")
-        if self._writer is None:
-            self._writer = BlobWriter(self.mode, self.client, self.readall)
-        return self._writer
+    def closed(self):
+        return self._f.closed
 
-    def write(self, data) -> int:
-        self.writer.write(data)
-        return len(data)
+    def fileno(self):
+        return self._f.fileno()
 
-    @typing.no_type_check
-    def readinto(self, b: bytearray) -> Optional[int]:
-        result = self.reader.get_bytes(len(b))
-        if result is None:
-            return None
-        n_bytes = len(result)
-        b[:n_bytes] = result
-        return n_bytes
+    def flush(self):
+        return self._f.flush()
 
+    def readable(self):
+        return self._mode.reading
 
-class BlobWriter:
-    def __init__(self, mode, client, download) -> None:
-        self.client = client
-        self.mode = mode
-        self._download = download
-        self.buf = bytearray()
+    def readline(self, limit=-1):
+        return self._f.readline(limit)
 
-    def write(self, data):
-        self.buf.extend(data)
+    def seek(self, offset, whence=os.SEEK_SET):
+        if whence not in (os.SEEK_CUR, os.SEEK_END, os.SEEK_SET):
+            raise ValueError("invalid value for 'whence'")
+        self._f.seek(offset, whence)
+        return self._f.tell()
 
-    def commit(self):
-        if not self.client.exists():
-            content = EMPTY_BYTES
-        elif self.mode.appending:
-            content = self._download()
-        else:
-            content = EMPTY_BYTES
+    def seekable(self):
+        return True
 
-        content = content + bytes(self.buf)
-        self.client.upload_blob(content, overwrite=True)
+    def tell(self):
+        return self._f.tell()
 
+    def writable(self):
+        return self._mode.writing
 
-class BlobStreamReader:
-    def __init__(self, stream) -> None:
-        self.chunks = stream.chunks()
-        self.leftover = bytearray()
-        self.eof = False
+    def writelines(self, lines):
+        return self._f.writelines(lines)
 
-    def readline(self, size: int = -1) -> bytes:
-        newline = b"\n"
-        if self.eof:
-            return EMPTY_BYTES
-        while newline not in self.leftover:
-            try:
-                self.leftover.extend(next(self.chunks))
-            except StopIteration:
-                self.eof = True
-                return bytes(self.leftover)
-        idx_linebreak = self.leftover.find(newline)
-        n = None
-        if size != -1 and idx_linebreak > size:
-            n = size
-        else:
-            n = idx_linebreak + 1
-        curr, self.leftover = self.leftover[:n], self.leftover[n:]
-        return bytes(curr)
+    def read(self, n=-1):
+        if not self._mode.reading:
+            raise OSError("not open for reading")
+        return self._f.read(n)
 
-    def get_bytes(self, size: int) -> Bytes:
-        n = size
-        if not self.eof:
-            while len(self.leftover) < n:
-                try:
-                    self.leftover.extend(next(self.chunks))
-                except StopIteration:
-                    self.eof = True
-                    break
-        curr, self.leftover = self.leftover[:n], self.leftover[n:]
-        return bytes(curr)
+    def readall(self):
+        return self._f.read()
+
+    def readinto(self, b):
+        return self._f.readinto(b)
+
+    def write(self, b):
+        if not self._mode.writing:
+            raise OSError("not open for writing")
+        self._f.write(b)
+        return len(b)
+
+    def truncate(self, size=None):
+        if size is None:
+            size = self._f.tell()
+        self._f.truncate(size)
+        return size
+
+    def __next__(self):
+        line = self._f.readline()
+        if not line:
+            raise StopIteration
+        return line

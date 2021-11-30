@@ -4,12 +4,9 @@ from contextlib import contextmanager
 from uuid import uuid4
 
 import pytest
-from azure.storage.blob import BlobClient
-from fs.mode import Mode
 
-import fs
 from fs import errors, open_fs
-from fs.azblob import BlobFile, BlobFS
+from fs.azblob import BlobFS
 from fs.opener.blob_fs import BlobFSOpener
 from fs.opener.parse import parse_fs_url
 from fs.opener.registry import registry
@@ -27,20 +24,16 @@ def bfs():
     return BlobFS(account_name, container)
 
 
-@pytest.fixture
-def account_key():
-    key = os.getenv(BLOB_ACCOUNT_KEY)
-    assert key is not None, f"{BLOB_ACCOUNT_KEY} required for write operations"
-    return key
+ACCOUNT_KEY = os.getenv(BLOB_ACCOUNT_KEY)
 
 
 @pytest.fixture
-def bfs_rw(account_key):
-    return BlobFS(account_name, container, account_key=account_key)
+def bfs_rw():
+    return BlobFS(account_name, container, account_key=ACCOUNT_KEY)
 
 
 @contextmanager
-def new_file(bfs_rw, content):
+def new_file(bfs_rw, content=b""):
     fname = "hello.txt"
     if bfs_rw.exists(fname):
         bfs_rw.remove(fname)
@@ -81,14 +74,6 @@ def test_download_not_exists(bfs):
         bfs.download(fname, io.BytesIO())
 
 
-def test_subfs(bfs):
-    # list existing file from 2 locations
-    path = "foo/bar"
-    list1 = bfs.listdir(path)
-    list2 = bfs.opendir(path).listdir(".")
-    assert list1 == list2
-
-
 @pytest.mark.creds
 def test_remove_not_found(bfs_rw):
     with pytest.raises(errors.ResourceNotFound):
@@ -107,65 +92,46 @@ def test_makedirs(bfs_rw):
 
 
 @pytest.mark.creds
-def test_copy_fs(account_key):
-    src = BlobFS(account_name, "test", account_key=account_key)
-    dest = BlobFS(account_name, "test2", account_key=account_key)
-    path = "foo/bar"
-    fs.copy.copy_dir(src, path, dest, path)
-    assert "foo" in dest.listdir(".")
-    assert "bar" in dest.listdir("foo")
-    dest.removetree(".")
-    assert len(dest.listdir(".")) == 0
-
-
 class TestBlobFile:
-    @pytest.mark.creds
     def test_readline(self, bfs_rw):
         with new_file(bfs_rw, b"line1\nline2\n") as fname:
-            bc = BlobClient(url, container, fname)
-            bfile = BlobFile(bc, Mode("r"))
-            line = bfile.readline()
-            assert line == b"line1\n"
-            line = bfile.readline()
-            assert line == b"line2\n"
-            line = bfile.readline()
-            assert line == b""
+            with bfs_rw.openbin(fname) as bfile:
+                line = bfile.readline()
+                assert line == b"line1\n"
+                line = bfile.readline()
+                assert line == b"line2\n"
+                line = bfile.readline()
+                assert line == b""
 
-    @pytest.mark.creds
     def test_readline_with_limit(self, bfs_rw):
         with new_file(bfs_rw, b"line1\nline2") as fname:
-            bc = BlobClient(url, container, fname)
-            bfile = BlobFile(bc, Mode("r"))
-            line = bfile.readline(3)
-            assert line == b"lin"
-            line = bfile.readline(4)
-            assert line == b"e1\n"
-            line = bfile.readline()
-            assert line == b"line2"
+            with bfs_rw.openbin(fname) as bfile:
+                line = bfile.readline(3)
+                assert line == b"lin"
+                line = bfile.readline(4)
+                assert line == b"e1\n"
+                line = bfile.readline()
+                assert line == b"line2"
 
-    def test_open_close(self):
-        bc = BlobClient(url, container, "some_file")
-        with BlobFile(bc, Mode("r")) as bfile:
-            assert not bfile.closed
-        assert bfile.closed
+    def test_open_close(self, bfs_rw):
+        with new_file(bfs_rw) as fname:
+            with bfs_rw.openbin(fname) as bfile:
+                assert not bfile.closed
+            assert bfile.closed
 
-    @pytest.mark.creds
     def test_iterate_lines(self, bfs_rw):
         with new_file(bfs_rw, b"line1\nline2\n\n") as fname:
-            bc = BlobClient(url, container, fname)
-            bfile = BlobFile(bc, Mode("r"))
-            assert 3 == sum(1 for _ in bfile)
+            with bfs_rw.openbin(fname) as bfile:
+                assert 3 == sum(1 for _ in bfile)
 
-    @pytest.mark.creds
     def test_readall(self, bfs_rw):
         with new_file(bfs_rw, b"line1\nline2\n\n") as fname:
-            bc = BlobClient(url, container, fname)
-            bfile = BlobFile(bc, Mode("r"))
-            line1 = bfile.readline()
-            assert b"line1\n" == line1
-            remaining = bfile.readall()
-            assert line1 not in remaining
-            assert b"line2" in remaining
+            with bfs_rw.openbin(fname) as bfile:
+                line1 = bfile.readline()
+                assert b"line1\n" == line1
+                remaining = bfile.readall()
+                assert line1 not in remaining
+                assert b"line2" in remaining
 
 
 class TestOpener:
@@ -176,8 +142,8 @@ class TestOpener:
         assert isinstance(bfs, BlobFS)
 
     @pytest.mark.creds
-    def test_opener_with_creds(self, account_key):
-        url = f"azblob://{account_name}:{account_key}@{container}"
+    def test_opener_with_creds(self):
+        url = f"azblob://{account_name}:{ACCOUNT_KEY}@{container}"
         print(parse_fs_url(url))
         bfs = open_fs(url)
         assert isinstance(bfs, BlobFS)
