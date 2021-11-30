@@ -14,12 +14,12 @@ class BlobFile(io.IOBase):
         return proxy
 
     def __repr__(self):
-        return f"BlobFile({self.blob.blob_name}, {self._mode})"
+        return f"BlobFile({self.blob.blob_name}, {self.mode})"
 
     def __init__(self, f, blob, mode):
         self._f = f
         self.blob = blob
-        self._mode = mode
+        self.mode = mode
 
     def __enter__(self):
         return self
@@ -32,7 +32,7 @@ class BlobFile(io.IOBase):
         return self._f
 
     def close(self):
-        if self._mode.writing:
+        if self.mode.writing:
             self.seek(os.SEEK_SET)
             self.blob.upload_blob(self.raw, overwrite=True)
         self._f.close()
@@ -48,7 +48,7 @@ class BlobFile(io.IOBase):
         return self._f.flush()
 
     def readable(self):
-        return self._mode.reading
+        return self.mode.reading
 
     def readline(self, limit=-1):
         return self._f.readline(limit)
@@ -66,13 +66,13 @@ class BlobFile(io.IOBase):
         return self._f.tell()
 
     def writable(self):
-        return self._mode.writing
+        return self.mode.writing
 
     def writelines(self, lines):
         return self._f.writelines(lines)
 
     def read(self, n=-1):
-        if not self._mode.reading:
+        if not self.mode.reading:
             raise OSError("not open for reading")
         return self._f.read(n)
 
@@ -83,7 +83,7 @@ class BlobFile(io.IOBase):
         return self._f.readinto(b)
 
     def write(self, b):
-        if not self._mode.writing:
+        if not self.mode.writing:
             raise OSError("not open for writing")
         self._f.write(b)
         return len(b)

@@ -118,10 +118,8 @@ class BlobFS(FS):
         # self._check_dir_path(path)
         blob = self.client.get_blob_client(path)
         blob_file = BlobFile.factory(blob, _mode)
-        if _mode.create:
-            return blob_file
 
-        with blobfs_errors(path):
+        if self.exists(path):
             stream = blob.download_blob()
             stream.readinto(blob_file.raw)
 
