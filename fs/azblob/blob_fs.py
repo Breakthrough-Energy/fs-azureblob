@@ -8,7 +8,7 @@ from fs.base import FS
 from fs.enums import ResourceType
 from fs.info import Info
 from fs.mode import Mode
-from fs.path import abspath, basename, dirname, normpath
+from fs.path import abspath, basename, dirname, join, normpath
 from fs.subfs import SubFS
 from fs.time import datetime_to_epoch
 
@@ -67,18 +67,16 @@ class BlobFS(FS):
         self.check()
         namespaces = namespaces or ()
         path = self.validatepath(path)
-        if path == "":
-            # hack - so makedirs works as expected
-            info = _basic_info("/", is_dir=True)
+        base_name = basename(path)
+
+        dir_blob = self.client.get_blob_client(join(path, DIR_ENTRY))
+        if dir_blob.exists():
+            info = _basic_info(base_name, is_dir=True)
             return _info_from_dict(info, namespaces)
 
         blob = self.client.get_blob_client(path)
-        base_name = basename(path)
         if not blob.exists():
-            if base_name not in self.listdir(dirname(path)):
-                raise errors.ResourceNotFound(path)
-            info = _basic_info(name=base_name, is_dir=True)
-            return _info_from_dict(info, namespaces)
+            raise errors.ResourceNotFound(path)
 
         info = _basic_info(name=base_name, is_dir=False)
         if "details" in namespaces:
