@@ -115,9 +115,9 @@ class BlobFS(FS):
         _mode = Mode(mode)
 
         self._check_mode(path, _mode)
-        # self._check_dir_path(path)
+        self._check_dir_path(path)
         blob = self.client.get_blob_client(path)
-        blob_file = BlobFile.factory(blob, _mode)
+        blob_file = BlobFile.factory(blob, _mode.to_platform_bin())
 
         if self.exists(path):
             stream = blob.download_blob()
@@ -134,11 +134,11 @@ class BlobFS(FS):
             dir_path = dirname(path)
             self.getinfo(dir_path)
         except errors.ResourceNotFound:
-            raise errors.ResourceNotFound(path)
+            if DIR_ENTRY != basename(path):
+                raise errors.ResourceNotFound(path)
 
     def _check_mode(self, path, mode):
         mode.validate_bin()
-        # mode = mode.to_platform_bin()
         try:
             info = self.getinfo(path)
             if mode.exclusive:

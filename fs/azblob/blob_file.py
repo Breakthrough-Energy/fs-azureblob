@@ -2,6 +2,8 @@ import io
 import os
 import tempfile
 
+from fs.mode import Mode
+
 
 class BlobFile(io.IOBase):
     """Proxy for a blob file."""
@@ -19,7 +21,7 @@ class BlobFile(io.IOBase):
     def __init__(self, f, blob, mode):
         self._f = f
         self.blob = blob
-        self.mode = mode
+        self.mode = Mode(mode)
 
     def __enter__(self):
         return self
