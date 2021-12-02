@@ -169,6 +169,8 @@ class BlobFS(FS):
     def remove(self, path: str) -> None:
         self.check()
         path = self.validatepath(path)
+        if self.getinfo(path).is_dir:
+            raise errors.FileExpected(path)
         with blobfs_errors(path):
             self.client.delete_blob(path)
 
