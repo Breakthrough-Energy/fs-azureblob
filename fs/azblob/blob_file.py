@@ -35,7 +35,7 @@ class BlobFile(io.IOBase):
 
     def close(self):
         if self.mode.writing:
-            self.seek(os.SEEK_SET)
+            self.seek(0)
             self.blob.upload_blob(self.raw, overwrite=True)
         self._f.close()
 
