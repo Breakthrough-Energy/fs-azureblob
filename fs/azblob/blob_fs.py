@@ -7,7 +7,7 @@ from fs.base import FS
 from fs.enums import ResourceType
 from fs.info import Info
 from fs.mode import Mode
-from fs.path import abspath, basename, dirname, join, normpath
+from fs.path import basename, dirname, join
 from fs.subfs import SubFS
 from fs.time import datetime_to_epoch
 
@@ -41,7 +41,16 @@ def _info_from_dict(info, namespaces):
     return Info(info)
 
 
+def _build_invalid_chars():
+    ctrl_chars = "".join([chr(i) for i in range(32)])
+    backslash = "\\"
+    delete = chr(127)  # \x7F
+    return ctrl_chars + backslash + delete
+
+
 class BlobFS(FS):
+    _meta = {"invalid_path_chars": _build_invalid_chars()}
+
     def __init__(self, account_name: str, container: str, account_key=None):
         super().__init__()
         self.client = ContainerClient(
@@ -65,7 +74,7 @@ class BlobFS(FS):
     def getinfo(self, path: str, namespaces=None) -> Info:
         self.check()
         namespaces = namespaces or ()
-        path = self.validatepath(path)
+        path = self._validatepath(path)
         base_name = basename(path)
 
         dir_blob = self.client.get_blob_client(join(path, DIR_ENTRY))
@@ -93,7 +102,7 @@ class BlobFS(FS):
 
     def listdir(self, path: str) -> list:
         self.check()
-        path = self.validatepath(path)
+        path = self._validatepath(path)
         if not self.getinfo(path).is_dir:
             raise errors.DirectoryExpected(path)
         parts = path.split("/")
@@ -108,7 +117,7 @@ class BlobFS(FS):
         self, path: str, mode: str = "r", buffering: int = -1, **options: Any
     ) -> BinaryIO:
         self.check()
-        path = self.validatepath(path)
+        path = self._validatepath(path)
         _mode = Mode(mode)
 
         self._check_mode(path, _mode)
@@ -148,9 +157,13 @@ class BlobFS(FS):
             if not mode.create:
                 raise errors.ResourceNotFound(path)
 
-    def validatepath(self, path: str) -> str:
-        path = abspath(normpath(path))
-        return path.strip("/")
+    def _validatepath(self, path: str) -> str:
+        _path = super().validatepath(path)
+        if _path.endswith("."):
+            raise errors.InvalidPath(path)
+
+        # return quote(_path).strip("/")
+        return _path.strip("/")
 
     def _check_makedir(self, path, recreate):
         if not self.isdir(dirname(path)):
@@ -161,14 +174,14 @@ class BlobFS(FS):
 
     def makedir(self, path: str, permissions=None, recreate: bool = False) -> SubFS:  # type: ignore
         self.check()
-        path = self.validatepath(path)
+        path = self._validatepath(path)
         self._check_makedir(path, recreate)
         self.touch(path + "/" + DIR_ENTRY)
         return SubFS(self, path)
 
     def remove(self, path: str) -> None:
         self.check()
-        path = self.validatepath(path)
+        path = self._validatepath(path)
         if self.getinfo(path).is_dir:
             raise errors.FileExpected(path)
         with blobfs_errors(path):
@@ -176,7 +189,7 @@ class BlobFS(FS):
 
     def removedir(self, path: str) -> None:
         self.check()
-        _path = self.validatepath(path)
+        _path = self._validatepath(path)
         if _path == "":
             raise errors.RemoveRootError()
         info = self.getinfo(_path)
@@ -188,7 +201,7 @@ class BlobFS(FS):
 
     def setinfo(self, path: str, info) -> None:
         self.check()
-        path = self.validatepath(path)
+        path = self._validatepath(path)
         if not self.exists(path):
             raise errors.ResourceNotFound(path)
         if "details" in info:
