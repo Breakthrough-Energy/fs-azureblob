@@ -10,6 +10,20 @@
 
 # fs-azureblob
 
+## Installation
+
+The package can be installed via pip:
+```
+pip install git+https://github.com/Breakthrough-Energy/fs-azureblob
+```
+
+Or by cloning the repository and installing directly:
+```
+git clone https://github.com/Breakthrough-Energy/fs-azureblob
+cd fs-azureblob
+pip install .
+```
+Either approach will also install the core `fs` package if it's not already installed.
 
 ## Usage
 
@@ -37,6 +51,18 @@ using the following arguments:
 - `account_name`: the name of the storage account
 - `container`: the blob container
 - `account_key`: optional, but required for write operations or depending on the storage account access policies
+
+## Note
+Since blob storage uses a flat namespace (directories don't really exist), we create a
+placeholder file to represent them, always named `.fs_azblob`. This is an empty blob
+which is created for new directories, removed when a directory is removed, and omitted
+from `listdir` results, so should be transparent to users. To use this package on a new
+blob storage container, nothing needs to be done. For usage on an existing container,
+one should create this structure using the azure portal, sdk, or preferred tool, to
+ensure this package will function as expected.
+
+Additionally, this package is intended to operate on "block blobs". Other blob types
+include page blobs and append blobs. The package has not been tested on these types.
 
 
 ## See also
