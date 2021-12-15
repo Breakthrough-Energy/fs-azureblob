@@ -13,11 +13,26 @@ from fs.time import datetime_to_epoch
 
 from fs import errors
 from fs.azblob.blob_file import BlobFile
+from fs.azblob.const import (
+    ACCESSED,
+    BASIC,
+    CREATED,
+    CREATION_TIME,
+    DETAILS,
+    DIR_ENTRY,
+    INVALID_CHARS,
+    IS_DIR,
+    LAST_ACCESSED_ON,
+    LAST_MODIFIED,
+    METADATA_CHANGED,
+    MODIFIED,
+    NAME,
+    SIZE,
+    TYPE,
+)
 from fs.azblob.error_tools import blobfs_errors
 
 logger = logging.getLogger(__name__)
-
-DIR_ENTRY = ".fs_azblob"
 
 
 def _convert_to_epoch(props: dict) -> None:
@@ -27,29 +42,22 @@ def _convert_to_epoch(props: dict) -> None:
 
 
 def _basic_info(name: str, is_dir: bool) -> dict:
-    return {"basic": {"name": name, "is_dir": is_dir}}
+    return {BASIC: {NAME: name, IS_DIR: is_dir}}
 
 
 def _info_from_dict(info, namespaces):
-    if "details" in namespaces:
-        if "details" not in info:
-            info["details"] = {}
-        if info["basic"]["is_dir"]:
-            info["details"]["type"] = ResourceType.directory
+    if DETAILS in namespaces:
+        if DETAILS not in info:
+            info[DETAILS] = {}
+        if info[BASIC][IS_DIR]:
+            info[DETAILS][TYPE] = ResourceType.directory
         else:
-            info["details"]["type"] = ResourceType.file
+            info[DETAILS][TYPE] = ResourceType.file
     return Info(info)
 
 
-def _build_invalid_chars():
-    ctrl_chars = "".join([chr(i) for i in range(32)])
-    backslash = "\\"
-    delete = chr(127)  # \x7F
-    return ctrl_chars + backslash + delete
-
-
 class BlobFS(FS):
-    _meta = {"invalid_path_chars": _build_invalid_chars()}
+    _meta = {"invalid_path_chars": INVALID_CHARS}
 
     def __init__(self, account_name: str, container: str, account_key=None):
         super().__init__()
@@ -87,16 +95,16 @@ class BlobFS(FS):
             raise errors.ResourceNotFound(path)
 
         info = _basic_info(name=base_name, is_dir=False)
-        if "details" in namespaces:
+        if DETAILS in namespaces:
             props = blob.get_blob_properties()
             details = {}
-            details["accessed"] = props["last_accessed_on"]
-            details["created"] = props["creation_time"]
-            details["metadata_changed"] = None
-            details["modified"] = props["last_modified"]
-            details["size"] = props["size"]
+            details[ACCESSED] = props[LAST_ACCESSED_ON]
+            details[CREATED] = props[CREATION_TIME]
+            details[METADATA_CHANGED] = None
+            details[MODIFIED] = props[LAST_MODIFIED]
+            details[SIZE] = props[SIZE]
             _convert_to_epoch(details)
-            info["details"] = details
+            info[DETAILS] = details
 
         return _info_from_dict(info, namespaces)
 
@@ -204,11 +212,11 @@ class BlobFS(FS):
         path = self._validatepath(path)
         if not self.exists(path):
             raise errors.ResourceNotFound(path)
-        if "details" in info:
-            details = info["details"]
+        if DETAILS in info:
+            details = info[DETAILS]
             meta = {
-                "last_accessed_on": str(details["accessed"]),
-                "last_modified": str(details["modified"]),
+                LAST_ACCESSED_ON: str(details[ACCESSED]),
+                LAST_MODIFIED: str(details[MODIFIED]),
             }
             with blobfs_errors(path):
                 blob = self.client.get_blob_client(path)
