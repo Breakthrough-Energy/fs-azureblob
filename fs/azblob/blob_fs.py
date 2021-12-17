@@ -70,14 +70,12 @@ class BlobFS(FS):
 
     def _check_container_client(self):
         try:
-            if self.client.exists():
-                return
+            if not self.client.exists():
+                raise errors.CreateFailed("Container does not exist")
         except:  # noqa
-            # if no credentials are provided, the check raises an auth error
-            pass
-        raise errors.FSError(
-            "Invalid parameters. Either incorrect account details, or container does not exist"
-        )
+            raise errors.CreateFailed(
+                "Invalid parameters. Either incorrect account details, or container does not exist"
+            )
 
     def getinfo(self, path: str, namespaces=None) -> Info:
         self.check()

@@ -7,7 +7,9 @@ from fs.mode import Mode
 
 
 class BlobFile(io.IOBase):
-    """Proxy for a blob file."""
+    """Proxy for a blob file. Implements the standard file api.
+    See https://docs.python.org/3/library/io.html#io.IOBase
+    """
 
     @classmethod
     def factory(cls, blob, mode):

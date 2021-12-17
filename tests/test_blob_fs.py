@@ -150,12 +150,12 @@ class TestOpener:
 
     def test_opener_error_wrong_container(self):
         url = f"azblob://{account_name}@{str(uuid4())}"
-        with pytest.raises(errors.FSError):
+        with pytest.raises(errors.CreateFailed):
             open_fs(url)
 
     def test_opener_error_wrong_key(self):
         url = f"azblob://{account_name}:asdf@{container}"
-        with pytest.raises(errors.FSError):
+        with pytest.raises(errors.CreateFailed):
             open_fs(url)
 
 
