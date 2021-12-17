@@ -45,7 +45,7 @@ def _basic_info(name: str, is_dir: bool) -> dict:
     return {BASIC: {NAME: name, IS_DIR: is_dir}}
 
 
-def _info_from_dict(info, namespaces):
+def _info_from_dict(info: dict, namespaces) -> Info:
     if DETAILS in namespaces:
         if DETAILS not in info:
             info[DETAILS] = {}
@@ -95,12 +95,13 @@ class BlobFS(FS):
         info = _basic_info(name=base_name, is_dir=False)
         if DETAILS in namespaces:
             props = blob.get_blob_properties()
-            details = {}
-            details[ACCESSED] = props[LAST_ACCESSED_ON]
-            details[CREATED] = props[CREATION_TIME]
-            details[METADATA_CHANGED] = None
-            details[MODIFIED] = props[LAST_MODIFIED]
-            details[SIZE] = props[SIZE]
+            details = {
+                ACCESSED: props[LAST_ACCESSED_ON],
+                CREATED: props[CREATION_TIME],
+                METADATA_CHANGED: None,
+                MODIFIED: props[LAST_MODIFIED],
+                SIZE: props[SIZE],
+            }
             _convert_to_epoch(details)
             info[DETAILS] = details
 
@@ -143,7 +144,7 @@ class BlobFS(FS):
 
         return blob_file  # type: ignore
 
-    def _check_dir_path(self, path):
+    def _check_dir_path(self, path: str) -> None:
         try:
             dir_path = dirname(path)
             self.getinfo(dir_path)
@@ -151,7 +152,7 @@ class BlobFS(FS):
             if DIR_ENTRY != basename(path):
                 raise errors.ResourceNotFound(path)
 
-    def _check_mode(self, path, mode):
+    def _check_mode(self, path: str, mode: Mode) -> None:
         mode.validate_bin()
         try:
             info = self.getinfo(path)
@@ -168,10 +169,9 @@ class BlobFS(FS):
         if _path.endswith("."):
             raise errors.InvalidPath(path)
 
-        # return quote(_path).strip("/")
         return _path.strip("/")
 
-    def _check_makedir(self, path, recreate):
+    def _check_makedir(self, path: str, recreate: bool) -> None:
         if not self.isdir(dirname(path)):
             raise errors.ResourceNotFound(path)
         if not recreate:
