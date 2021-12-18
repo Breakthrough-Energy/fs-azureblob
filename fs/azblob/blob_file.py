@@ -1,132 +1,106 @@
-import array
 import io
-import typing
-from typing import Iterator, Optional
+import os
+import tempfile
+from typing import Optional
 
-from azure.storage.blob import BlobClient
-
-from fs.azblob.error_tools import blobfs_errors
-
-Bytes = Optional[bytes]
-EMPTY_BYTES = b""
+from fs.mode import Mode
 
 
-class BlobFile(io.RawIOBase):
-    def __init__(self, client: BlobClient, mode=None):
-        self.client = client
-        self.mode = mode
-        self._reader: BlobStreamReader = None  # type: ignore
-        self._writer: BlobWriter = None  # type: ignore
+class BlobFile(io.IOBase):
+    """Proxy for a blob file. Implements the standard file api.
+    See https://docs.python.org/3/library/io.html#io.IOBase
+    """
+
+    @classmethod
+    def factory(cls, blob, mode):
+        """Create a BlobFile backed with a temporary file."""
+        _temp_file = tempfile.TemporaryFile()
+        proxy = cls(_temp_file, blob, mode)
+        return proxy
+
+    def __repr__(self):
+        return f"BlobFile({self._blob.blob_name}, {self.mode})"
+
+    def __init__(self, f, blob, mode):
+        self._f = f
+        self._blob = blob
+        self.mode = Mode(mode)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+
+    @property
+    def raw(self):
+        return self._f
+
+    def close(self) -> None:
+        if self.mode.writing:
+            self.seek(0)
+            self._blob.upload_blob(self.raw, overwrite=True)
+        self._f.close()
+
+    @property
+    def closed(self) -> bool:
+        return self._f.closed
+
+    def fileno(self) -> int:
+        return self._f.fileno()
 
     def flush(self) -> None:
-        if self.writable():
-            with blobfs_errors(self.client.blob_name):
-                self.writer.commit()
+        return self._f.flush()
 
     def readable(self) -> bool:
         return self.mode.reading
 
+    def readline(self, limit: Optional[int] = -1) -> bytes:
+        return self._f.readline(limit)
+
+    def seek(self, offset: int, whence: int = os.SEEK_SET) -> int:
+        if whence not in (os.SEEK_CUR, os.SEEK_END, os.SEEK_SET):
+            raise ValueError("invalid value for 'whence'")
+        self._f.seek(offset, whence)
+        return self._f.tell()
+
+    def seekable(self) -> bool:
+        return True
+
+    def tell(self) -> int:
+        return self._f.tell()
+
     def writable(self) -> bool:
         return self.mode.writing
 
-    @property
-    def reader(self) -> "BlobStreamReader":
-        if not self.readable():
-            raise ValueError("BlobFile must be opened in reading mode")
-        if self._reader is None:
-            with blobfs_errors(self.client.blob_name):
-                self._reader = BlobStreamReader(self.client.download_blob())
-        return self._reader
-
-    @property
-    def writer(self) -> "BlobWriter":
-        if not self.writable():
-            raise ValueError("BlobFile must be opened in writing mode")
-        if self._writer is None:
-            self._writer = BlobWriter(self.client)
-        return self._writer
-
-    def write(self, data) -> int:
-        self.writer.write(data)
-        return len(data)
-
-    @typing.no_type_check
-    def readinto(self, b: bytearray) -> Optional[int]:
-        result = self.reader.get_bytes(len(b))
-        if result is None:
-            return None
-        n_bytes = len(result)
-        b[:n_bytes] = result
-        return n_bytes
-
-    def readline(self, size: Optional[int] = -1) -> bytes:
-        if size is None or size < 0:
-            size = -1
-        return self.reader.readline(size)
-
     def writelines(self, lines) -> None:
-        for line in lines:
-            if isinstance(line, array.array):
-                line = line.tobytes()
-            self.writer.write(line + b"\n")
+        return self._f.writelines(lines)
+
+    def read(self, n: int = -1) -> bytes:
+        if not self.mode.reading:
+            raise OSError("not open for reading")
+        return self._f.read(n)
+
+    def readall(self) -> bytes:
+        return self._f.read()
+
+    def readinto(self, b) -> int:
+        return self._f.readinto(b)
+
+    def write(self, b) -> int:
+        if not self.mode.writing:
+            raise OSError("not open for writing")
+        self._f.write(b)
+        return len(b)
+
+    def truncate(self, size: Optional[int] = None) -> int:
+        if size is None:
+            size = self._f.tell()
+        self._f.truncate(size)
+        return size
 
     def __next__(self) -> bytes:
-        line = self.readline()
-        if line == EMPTY_BYTES:
+        line = self._f.readline()
+        if not line:
             raise StopIteration
         return line
-
-    def __iter__(self) -> Iterator[bytes]:
-        return self
-
-
-class BlobWriter:
-    def __init__(self, client) -> None:
-        self.client = client
-        self.buf = bytearray()
-
-    def write(self, data):
-        self.buf.extend(data)
-
-    def commit(self):
-        self.client.upload_blob(bytes(self.buf), overwrite=True)
-
-
-class BlobStreamReader:
-    def __init__(self, stream) -> None:
-        self.chunks = stream.chunks()
-        self.leftover = bytearray()
-        self.eof = False
-
-    def readline(self, size: int = -1) -> bytes:
-        newline = b"\n"
-        if self.eof:
-            return EMPTY_BYTES
-        while newline not in self.leftover:
-            try:
-                self.leftover.extend(next(self.chunks))
-            except StopIteration:
-                self.eof = True
-                return bytes(self.leftover)
-        idx_linebreak = self.leftover.find(newline)
-        n = None
-        if size != -1 and idx_linebreak > size:
-            n = size
-        else:
-            n = idx_linebreak + 1
-        curr, self.leftover = self.leftover[:n], self.leftover[n:]
-        return bytes(curr)
-
-    def get_bytes(self, size: int) -> Bytes:
-        if self.eof:
-            return None
-        n = size
-        while len(self.leftover) < n:
-            try:
-                self.leftover.extend(next(self.chunks))
-            except StopIteration:
-                self.eof = True
-                return bytes(self.leftover)
-        curr, self.leftover = self.leftover[:n], self.leftover[n:]
-        assert len(curr) == n
-        return bytes(curr)
