@@ -1,3 +1,4 @@
+[![PyPI](https://img.shields.io/pypi/v/fs-azureblob?color=purple)](https://pypi.org/project/fs-azureblob/)
 [![made-with-python](https://img.shields.io/badge/Made%20with-Python-1f425f.svg)](https://www.python.org/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 ![Tests](https://github.com/Breakthrough-Energy/fs-azureblob/workflows/Tests/badge.svg)
