@@ -1,5 +1,4 @@
 import datetime
-import logging
 from typing import Any, BinaryIO
 
 from azure.storage.blob import ContainerClient
@@ -31,8 +30,6 @@ from fs.azblob.const import (
     TYPE,
 )
 from fs.azblob.error_tools import blobfs_errors
-
-logger = logging.getLogger(__name__)
 
 
 def _convert_to_epoch(props: dict) -> None:
@@ -67,6 +64,7 @@ class BlobFS(FS):
             credential=account_key,
         )
         self._check_container_client()
+        self._init()
 
     def _check_container_client(self):
         try:
@@ -76,6 +74,11 @@ class BlobFS(FS):
             raise errors.CreateFailed(
                 "Invalid parameters. Either incorrect account details, or container does not exist"
             )
+
+    def _init(self):
+        root = self.client.get_blob_client(DIR_ENTRY)
+        if not root.exists():
+            root.upload_blob(b"")
 
     def getinfo(self, path: str, namespaces=None) -> Info:
         self.check()
@@ -107,18 +110,25 @@ class BlobFS(FS):
 
         return _info_from_dict(info, namespaces)
 
-    def listdir(self, path: str) -> list:
-        self.check()
-        path = self._validatepath(path)
-        if not self.getinfo(path).is_dir:
-            raise errors.DirectoryExpected(path)
+    def _list_blob_names(self, path: str) -> list:
+        """List blobs relative to a given path. For example, if the blob
+        foo/bar/file.txt exists, and the given path is foo/bar, this will return a
+        list containing 'file.txt'
+        """
         parts = path.split("/")
         num_parts = 0 if path == "" else len(parts)
         suffix = parts[-1]
         with blobfs_errors(path):
             _all = [b.name.split("/") for b in self.client.list_blobs(path)]
             _all = [p[num_parts] for p in _all if suffix in p or suffix == ""]
-            return list({a for a in _all if a != DIR_ENTRY})
+            return list(set(_all))
+
+    def listdir(self, path: str) -> list:
+        self.check()
+        path = self._validatepath(path)
+        if not self.getinfo(path).is_dir:
+            raise errors.DirectoryExpected(path)
+        return [b for b in self._list_blob_names(path) if b != DIR_ENTRY]
 
     def openbin(
         self, path: str, mode: str = "r", buffering: int = -1, **options: Any
@@ -145,6 +155,7 @@ class BlobFS(FS):
         return blob_file  # type: ignore
 
     def _check_dir_path(self, path: str) -> None:
+        """Ensure the parent directory of path exists"""
         try:
             dir_path = dirname(path)
             self.getinfo(dir_path)
@@ -153,6 +164,7 @@ class BlobFS(FS):
                 raise errors.ResourceNotFound(path)
 
     def _check_mode(self, path: str, mode: Mode) -> None:
+        """Ensure path can be opened using the given mode"""
         mode.validate_bin()
         try:
             info = self.getinfo(path)
