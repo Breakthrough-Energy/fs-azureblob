@@ -46,23 +46,18 @@ def _is_dir(blob):
     return False
 
 
-def _info_from_dict(props: dict, namespaces) -> Info:
-    info = {BASIC: {NAME: props[NAME], IS_DIR: _is_dir(props)}}
+def _basic_info(props) -> dict:
+    return {BASIC: {NAME: props[NAME], IS_DIR: _is_dir(props)}}
+
+
+def _info_from_dict(info: dict, namespaces) -> Info:
     if DETAILS in namespaces:
-        details = {
-            ACCESSED: props[LAST_ACCESSED_ON],
-            CREATED: props[CREATION_TIME],
-            METADATA_CHANGED: None,
-            MODIFIED: props[LAST_MODIFIED],
-            SIZE: props[SIZE],
-        }
+        if DETAILS not in info:
+            info[DETAILS] = {}
         if info[BASIC][IS_DIR]:
             info[DETAILS][TYPE] = ResourceType.directory
         else:
             info[DETAILS][TYPE] = ResourceType.file
-
-        _convert_to_epoch(details)
-        info[DETAILS] = details
     return Info(info)
 
 
@@ -97,7 +92,21 @@ class BlobFSV2(FS):
             raise errors.ResourceNotFound(path)
 
         props = dict(blob.get_file_properties())
-        return _info_from_dict(props, namespaces)
+        info = _basic_info(props)
+        if info[BASIC][IS_DIR]:
+            return _info_from_dict(info, namespaces)
+
+        if DETAILS in namespaces:
+            details = {
+                ACCESSED: props[LAST_ACCESSED_ON],
+                CREATED: props[CREATION_TIME],
+                METADATA_CHANGED: None,
+                MODIFIED: props[LAST_MODIFIED],
+                SIZE: props[SIZE],
+            }
+            _convert_to_epoch(details)
+            info[DETAILS] = details
+        return _info_from_dict(info, namespaces)
 
     def listdir(self, path: str) -> list:
         self.check()
