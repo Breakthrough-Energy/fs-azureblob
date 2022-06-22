@@ -1,14 +1,11 @@
-import datetime
 from typing import Any, BinaryIO
 
 from azure.storage.blob import ContainerClient
 from fs.base import FS
-from fs.enums import ResourceType
 from fs.info import Info
 from fs.mode import Mode
 from fs.path import basename, dirname, join
 from fs.subfs import SubFS
-from fs.time import datetime_to_epoch
 
 from fs import errors
 from fs.azblob.blob_file import BlobFile
@@ -27,30 +24,13 @@ from fs.azblob.const import (
     MODIFIED,
     NAME,
     SIZE,
-    TYPE,
 )
 from fs.azblob.error_tools import blobfs_errors
-
-
-def _convert_to_epoch(props: dict) -> None:
-    for k, v in props.items():
-        if isinstance(v, datetime.datetime):
-            props[k] = datetime_to_epoch(v)
+from fs.azblob.helpers import _convert_to_epoch, _info_from_dict
 
 
 def _basic_info(name: str, is_dir: bool) -> dict:
     return {BASIC: {NAME: name, IS_DIR: is_dir}}
-
-
-def _info_from_dict(info: dict, namespaces) -> Info:
-    if DETAILS in namespaces:
-        if DETAILS not in info:
-            info[DETAILS] = {}
-        if info[BASIC][IS_DIR]:
-            info[DETAILS][TYPE] = ResourceType.directory
-        else:
-            info[DETAILS][TYPE] = ResourceType.file
-    return Info(info)
 
 
 class BlobFS(FS):
