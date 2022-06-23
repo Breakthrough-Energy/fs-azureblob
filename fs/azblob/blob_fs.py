@@ -120,7 +120,7 @@ class BlobFS(FS):
         self._check_mode(path, _mode)
         self._check_dir_path(path)
         blob = self.client.get_blob_client(path)
-        blob_file = BlobFile.factory(blob, _mode.to_platform_bin())
+        blob_file = BlobFile.factory(blob, _mode.to_platform_bin(), version=1)
 
         if self.exists(path):
             stream = blob.download_blob()

@@ -1,4 +1,4 @@
-__all__ = ["BlobFSOpener"]
+__all__ = ["BlobFSOpener", "BlobFSV2Opener"]
 
 from fs.azblob import BlobFS
 from fs.azblob.blob_fs_v2 import BlobFSV2

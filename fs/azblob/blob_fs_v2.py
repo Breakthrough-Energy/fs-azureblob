@@ -105,11 +105,11 @@ class BlobFSV2(FS):
 
         self._check_mode(path, _mode)
         self._check_dir_path(path)
-        blob = self.client.get_blob_client(path)
-        blob_file = BlobFile.factory(blob, _mode.to_platform_bin())
+        blob = self.client.get_file_client(path)
+        blob_file = BlobFile.factory(blob, _mode.to_platform_bin(), version=2)
 
         if self.exists(path):
-            stream = blob.download_blob()
+            stream = blob.download_file()
             stream.readinto(blob_file.raw)
 
         if _mode.truncate:
@@ -194,5 +194,5 @@ class BlobFSV2(FS):
                 LAST_MODIFIED: str(details[MODIFIED]),
             }
             with blobfs_errors(path):
-                blob = self.client.get_blob_client(path)
-                blob.set_blob_metadata(meta)
+                blob = self.client.get_file_client(path)
+                blob.set_metadata(meta)

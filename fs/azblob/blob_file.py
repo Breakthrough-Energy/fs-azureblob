@@ -12,19 +12,32 @@ class BlobFile(io.IOBase):
     """
 
     @classmethod
-    def factory(cls, blob, mode):
+    def factory(cls, blob, mode, version):
         """Create a BlobFile backed with a temporary file."""
         _temp_file = tempfile.TemporaryFile()
-        proxy = cls(_temp_file, blob, mode)
+        proxy = cls(_temp_file, blob, mode, version)
         return proxy
 
     def __repr__(self):
-        return f"BlobFile({self._blob.blob_name}, {self.mode})"
+        return f"BlobFile({self._name}, {self.mode})"
 
-    def __init__(self, f, blob, mode):
+    def __init__(self, f, blob, mode, version):
         self._f = f
         self._blob = blob
         self.mode = Mode(mode)
+        self.version = version
+
+    def _name(self):
+        if self.version == 1:
+            return self._blob.blob_name
+        if self.version == 2:
+            return self._blob.path_name
+
+    def _upload(self):
+        if self.version == 1:
+            self._blob.upload_blob(self.raw, overwrite=True)
+        if self.version == 2:
+            self._blob.upload_data(self.raw, overwrite=True)
 
     def __enter__(self):
         return self
@@ -39,7 +52,7 @@ class BlobFile(io.IOBase):
     def close(self) -> None:
         if self.mode.writing:
             self.seek(0)
-            self._blob.upload_blob(self.raw, overwrite=True)
+            self._upload()
         self._f.close()
 
     @property
