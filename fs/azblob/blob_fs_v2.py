@@ -142,11 +142,7 @@ class BlobFSV2(FS):
                 raise errors.ResourceNotFound(path)
 
     def _validatepath(self, path: str) -> str:
-        _path = super().validatepath(path)
-        if _path.endswith("."):
-            raise errors.InvalidPath(path)
-
-        return _path.strip("/")
+        return super().validatepath(path)
 
     def _check_makedir(self, path: str, recreate: bool) -> None:
         if not self.isdir(dirname(path)):
