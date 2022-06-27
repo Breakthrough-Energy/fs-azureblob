@@ -19,7 +19,7 @@ class BlobFile(io.IOBase):
         return proxy
 
     def __repr__(self):
-        return f"BlobFile({self._name}, {self.mode})"
+        return f"BlobFile({self._name()}, {self.mode})"
 
     def __init__(self, f, blob, mode, version):
         self._f = f
@@ -34,10 +34,13 @@ class BlobFile(io.IOBase):
             return self._blob.path_name
 
     def _upload(self):
-        if self.version == 1:
+        version = self.version
+        if version == 1:
             self._blob.upload_blob(self.raw, overwrite=True)
-        if self.version == 2:
+        elif version == 2:
             self._blob.upload_data(self.raw, overwrite=True)
+        else:
+            raise ValueError(f"Unknown sdk {version=}")
 
     def __enter__(self):
         return self

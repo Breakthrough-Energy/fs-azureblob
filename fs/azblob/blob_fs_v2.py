@@ -4,7 +4,7 @@ from azure.storage.filedatalake import DataLakeServiceClient
 from fs.base import FS
 from fs.info import Info
 from fs.mode import Mode
-from fs.path import dirname
+from fs.path import basename, dirname
 from fs.subfs import SubFS
 
 from fs import errors
@@ -72,6 +72,7 @@ class BlobFSV2(FS):
             raise errors.ResourceNotFound(path)
 
         props = dict(blob.get_file_properties())
+        props[NAME] = basename(path)
         info = _basic_info(props)
         if info[BASIC][IS_DIR]:
             return _info_from_dict(info, namespaces)
@@ -111,6 +112,8 @@ class BlobFSV2(FS):
         if self.exists(path):
             stream = blob.download_file()
             stream.readinto(blob_file.raw)
+        else:
+            blob.create_file()
 
         if _mode.truncate:
             blob_file.seek(0)
@@ -168,10 +171,10 @@ class BlobFSV2(FS):
 
     def removedir(self, path: str) -> None:
         self.check()
-        _path = self._validatepath(path)
-        if _path == "":
+        path = self._validatepath(path)
+        if path == "":
             raise errors.RemoveRootError()
-        info = self.getinfo(_path)
+        info = self.getinfo(path)
         if not info.is_dir:
             raise errors.DirectoryExpected(path)
         if not self.isempty(path):
