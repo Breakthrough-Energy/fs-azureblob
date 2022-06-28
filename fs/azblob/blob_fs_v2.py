@@ -17,7 +17,6 @@ from fs.azblob.const import (
     DETAILS,
     INVALID_CHARS,
     IS_DIR,
-    LAST_ACCESSED_ON,
     LAST_MODIFIED,
     METADATA_CHANGED,
     MODIFIED,
@@ -79,7 +78,7 @@ class BlobFSV2(FS):
 
         if DETAILS in namespaces:
             details = {
-                ACCESSED: props[LAST_ACCESSED_ON],
+                ACCESSED: None,
                 CREATED: props[CREATION_TIME],
                 METADATA_CHANGED: None,
                 MODIFIED: props[LAST_MODIFIED],
@@ -158,7 +157,9 @@ class BlobFSV2(FS):
         self.check()
         path = self._validatepath(path)
         self._check_makedir(path, recreate)
-        self.client.create_directory(path)
+        dir_client = self.client.get_directory_client(path)
+        if not dir_client.exists():
+            dir_client.create_directory()
         return SubFS(self, path)
 
     def remove(self, path: str) -> None:
@@ -189,7 +190,7 @@ class BlobFSV2(FS):
         if DETAILS in info:
             details = info[DETAILS]
             meta = {
-                LAST_ACCESSED_ON: str(details[ACCESSED]),
+                # TODO: custom metadata?
                 LAST_MODIFIED: str(details[MODIFIED]),
             }
             with blobfs_errors(path):
