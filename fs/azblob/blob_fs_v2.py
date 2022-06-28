@@ -64,14 +64,14 @@ class BlobFSV2(FS):
     def getinfo(self, path: str, namespaces=None) -> Info:
         self.check()
         namespaces = namespaces or ()
-        path = self._validatepath(path)
+        _path = self._validatepath(path)
 
-        blob = self.client.get_file_client(path)
+        blob = self.client.get_file_client(_path)
         if not blob.exists():
             raise errors.ResourceNotFound(path)
 
         props = dict(blob.get_file_properties())
-        props[NAME] = basename(path)
+        props[NAME] = basename(_path)
         info = _basic_info(props)
         if info[BASIC][IS_DIR]:
             return _info_from_dict(info, namespaces)
@@ -108,16 +108,16 @@ class BlobFSV2(FS):
         blob = self.client.get_file_client(path)
         blob_file = BlobFile.factory(blob, _mode.to_platform_bin(), version=2)
 
-        if self.exists(path):
-            stream = blob.download_file()
-            stream.readinto(blob_file.raw)
-        else:
+        if not blob.exists():
+            blob.create_file()
+        elif _mode.truncate:
+            blob.delete_file()
             blob.create_file()
 
-        if _mode.truncate:
-            blob_file.seek(0)
-            blob_file.truncate()
-        elif not _mode.appending:
+        stream = blob.download_file()
+        stream.readinto(blob_file.raw)
+
+        if not _mode.appending:
             blob_file.seek(0)
 
         return blob_file  # type: ignore
@@ -164,11 +164,11 @@ class BlobFSV2(FS):
 
     def remove(self, path: str) -> None:
         self.check()
-        path = self._validatepath(path)
+        _path = self._validatepath(path)
         if self.getinfo(path).is_dir:
             raise errors.FileExpected(path)
         with blobfs_errors(path):
-            self.client.delete_file(path)
+            self.client.delete_file(_path)
 
     def removedir(self, path: str) -> None:
         self.check()
