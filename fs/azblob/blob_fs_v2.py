@@ -64,7 +64,7 @@ class BlobFSV2(FS):
     def getinfo(self, path: str, namespaces=None) -> Info:
         self.check()
         namespaces = namespaces or ()
-        _path = self._validatepath(path)
+        _path = self.validatepath(path)
 
         blob = self.client.get_file_client(_path)
         if not blob.exists():
@@ -90,7 +90,7 @@ class BlobFSV2(FS):
 
     def listdir(self, path: str) -> list:
         self.check()
-        path = self._validatepath(path)
+        path = self.validatepath(path)
         if not self.getinfo(path).is_dir:
             raise errors.DirectoryExpected(path)
         paths = self.client.get_paths(path, recursive=False)
@@ -100,7 +100,7 @@ class BlobFSV2(FS):
         self, path: str, mode: str = "r", buffering: int = -1, **options: Any
     ) -> BinaryIO:
         self.check()
-        path = self._validatepath(path)
+        path = self.validatepath(path)
         _mode = Mode(mode)
 
         self._check_mode(path, _mode)
@@ -143,9 +143,6 @@ class BlobFSV2(FS):
             if not mode.create:
                 raise errors.ResourceNotFound(path)
 
-    def _validatepath(self, path: str) -> str:
-        return super().validatepath(path)
-
     def _check_makedir(self, path: str, recreate: bool) -> None:
         if not self.isdir(dirname(path)):
             raise errors.ResourceNotFound(path)
@@ -155,7 +152,7 @@ class BlobFSV2(FS):
 
     def makedir(self, path: str, permissions=None, recreate: bool = False) -> SubFS:  # type: ignore
         self.check()
-        path = self._validatepath(path)
+        path = self.validatepath(path)
         self._check_makedir(path, recreate)
         dir_client = self.client.get_directory_client(path)
         if not dir_client.exists():
@@ -164,7 +161,7 @@ class BlobFSV2(FS):
 
     def remove(self, path: str) -> None:
         self.check()
-        _path = self._validatepath(path)
+        _path = self.validatepath(path)
         if self.getinfo(path).is_dir:
             raise errors.FileExpected(path)
         with blobfs_errors(path):
@@ -172,8 +169,8 @@ class BlobFSV2(FS):
 
     def removedir(self, path: str) -> None:
         self.check()
-        path = self._validatepath(path)
-        if path == "":
+        path = self.validatepath(path)
+        if path == "/":
             raise errors.RemoveRootError()
         info = self.getinfo(path)
         if not info.is_dir:
@@ -184,7 +181,7 @@ class BlobFSV2(FS):
 
     def setinfo(self, path: str, info) -> None:
         self.check()
-        path = self._validatepath(path)
+        path = self.validatepath(path)
         if not self.exists(path):
             raise errors.ResourceNotFound(path)
         if DETAILS in info:
