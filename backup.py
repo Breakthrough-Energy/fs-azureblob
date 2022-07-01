@@ -9,7 +9,7 @@ logging.disable(logging.WARN)
 
 
 account = "esmi"
-container = "profiles"
+container = "scenariodata"
 key = os.environ["BLOB_ACCOUNT_KEY_V2"]
 
 
@@ -34,8 +34,30 @@ def _on_copy(src_fs, src_path, dst_fs, dst_path):
         f.write(msg)
 
 
+def _size(_fs, path):
+    try:
+        return _fs.getinfo(path, namespaces=["details"]).size
+    except Exception as e:
+        print(e)
+        return -1
+
+
+def mismatch(path):
+    fs1 = lfs.opendir(path)
+    fs2 = bfs.opendir(path)
+    for _path in fs1.walk.files():
+        s1 = _size(fs1, _path)
+        s2 = _size(fs2, _path)
+        if s1 != s2:
+            print(f"{_path=}, {s1=}, {s2=}")
+
+
 def main():
-    path = "data/input"
+    path = "data/output"
     fs1 = lfs.opendir(path)
     fs2 = bfs.opendir(path)
     copy_dir_if(fs1, ".", fs2, ".", condition="newer", on_copy=_on_copy)
+
+
+if __name__ == "__main__":
+    mismatch("data/input")
