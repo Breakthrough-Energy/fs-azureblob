@@ -28,19 +28,28 @@ Either approach will also install the core `fs` package if it's not already inst
 
 ## Usage
 
+This library implements the pyfilesystem API for blob storage containers in a general
+purpose storage account. There are implementations for the original blob storage, which
+uses a flat namespace with virtual directories, and accounts with hierarchical namespace
+enabled, which adds native directory support as well as other features. The type of
+account must be specified when a filesystem is instantiated: use the `azblob` protocol,
+or `BlobFS` class for accounts with a flat namespace, or the `azblobv2` protocol or the
+`BlobFSV2` class for accounts with a hierarchical namespace. 
+
 ### Opener
 
 Use `fs.open_fs` to open a filesystem with an azure blob
-[FS URL](https://docs.pyfilesystem.org/en/latest/openers.html):
+[FS URL](https://docs.pyfilesystem.org/en/latest/openers.html), where `protocol` is
+either `azblob` or `azblobv2`:
 
 ```python
 import fs
-my_fs = fs.open_fs("azblob://[account_name]:[account_key]@[container]")
+my_fs = fs.open_fs("[protocol]://[account_name]:[account_key]@[container]")
 ```
 
 ### Constructor
 
-The `BlobFS` class can also be instantiated directly
+The `BlobFS` (or `BlobFSV2`) class can also be instantiated directly
 
 ```python
 from fs.azblob import BlobFS
@@ -54,6 +63,8 @@ using the following arguments:
 - `account_key`: optional, but required for write operations or depending on the storage account access policies
 
 ## Note
+The following can be ignored if using an account with hierarchical namespace.
+
 Since blob storage uses a flat namespace (directories don't really exist), we create a
 placeholder file to represent them, always named `.fs_azblob`. This is an empty blob
 which is created for new directories, removed when a directory is removed, and omitted
