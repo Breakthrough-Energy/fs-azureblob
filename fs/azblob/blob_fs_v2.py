@@ -21,6 +21,7 @@ from fs.azblob.const import (
     METADATA_CHANGED,
     MODIFIED,
     NAME,
+    READ_ONLY,
     SIZE,
 )
 from fs.azblob.error_tools import blobfs_errors
@@ -51,6 +52,8 @@ class BlobFSV2(FS):
         )
         self.client = self._svc.get_file_system_client(container)
         self._check_container_client()
+        self._meta = self._meta.copy()
+        self._meta[READ_ONLY] = account_key is None
 
     def _check_container_client(self):
         try:

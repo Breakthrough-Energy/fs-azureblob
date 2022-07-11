@@ -28,3 +28,4 @@ def _build_invalid_chars():
 
 
 INVALID_CHARS = _build_invalid_chars()
+READ_ONLY = "read_only"
