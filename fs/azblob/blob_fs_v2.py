@@ -162,6 +162,28 @@ class BlobFSV2(FS):
             dir_client.create_directory()
         return SubFS(self, path)
 
+    def move(
+        self,
+        src_path: str,
+        dst_path: str,
+        overwrite: bool = False,
+        preserve_time: bool = False,
+    ) -> None:
+
+        self.check()
+        if not overwrite and self.exists(dst_path):
+            raise errors.DestinationExists(dst_path)
+        if self.isdir(src_path):
+            raise errors.FileExpected(src_path)
+
+        src_path = self.validatepath(src_path)
+        dst_path = self.validatepath(dst_path)
+
+        with blobfs_errors(src_path):
+            blob = self.client.get_file_client(src_path)
+            with blobfs_errors(dst_path):
+                blob.rename_file(self.client.file_system_name + dst_path)
+
     def remove(self, path: str) -> None:
         self.check()
         _path = self.validatepath(path)
