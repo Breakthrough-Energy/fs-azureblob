@@ -20,5 +20,7 @@ def blobfs_errors(path):
         raise errors.DestinationExists(path)
     except ResourceNotFoundError:
         raise errors.ResourceNotFound(path)
-    except:  # noqa
+    except Exception as e:
+        if isinstance(e, errors.FSError):
+            raise
         raise errors.FSError(traceback.format_exc())
