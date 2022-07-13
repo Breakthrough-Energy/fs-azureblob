@@ -12,12 +12,14 @@ from fs.azblob.blob_file import BlobFile
 from fs.azblob.const import (
     ACCESSED,
     BASIC,
+    BLOB,
     CREATED,
     CREATION_TIME,
     DETAILS,
     INVALID_CHARS,
     IS_DIR,
     LAST_MODIFIED,
+    METADATA,
     METADATA_CHANGED,
     MODIFIED,
     NAME,
@@ -89,6 +91,9 @@ class BlobFSV2(FS):
             }
             _convert_to_epoch(details)
             info[DETAILS] = details
+
+        if BLOB in namespaces:
+            info[BLOB] = props[METADATA]
         return _info_from_dict(info, namespaces)
 
     def listdir(self, path: str) -> list:
@@ -209,12 +214,8 @@ class BlobFSV2(FS):
         path = self.validatepath(path)
         if not self.exists(path):
             raise errors.ResourceNotFound(path)
-        if DETAILS in info:
-            details = info[DETAILS]
-            meta = {
-                # TODO: custom metadata?
-                LAST_MODIFIED: str(details[MODIFIED]),
-            }
+        if BLOB in info:
+            meta = info[BLOB]
             with blobfs_errors(path):
                 blob = self.client.get_file_client(path)
                 blob.set_metadata(meta)

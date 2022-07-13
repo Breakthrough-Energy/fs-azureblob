@@ -62,6 +62,14 @@ using the following arguments:
 - `container`: the blob container
 - `account_key`: optional, but required for write operations or depending on the storage account access policies
 
+### Resource Info
+Users can call `getinfo` for the `basic` and `details` namespaces, however support for
+`setinfo` is limited, as these properties are enforced by azure (e.g. last modified
+time). There is a custom namespace called `blob` which can be used to set metadata on a
+blob, in the form of key value pairs which must be valid http headers.
+
+See [docs](https://docs.pyfilesystem.org/en/latest/info.html) for more details.
+
 ## Note
 The following can be ignored if using an account with hierarchical namespace.
 

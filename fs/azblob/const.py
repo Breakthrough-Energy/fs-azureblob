@@ -18,6 +18,7 @@ SIZE = "size"
 LAST_ACCESSED_ON = "last_accessed_on"
 CREATION_TIME = "creation_time"
 LAST_MODIFIED = "last_modified"
+METADATA = "metadata"
 
 
 def _build_invalid_chars():
@@ -29,3 +30,6 @@ def _build_invalid_chars():
 
 INVALID_CHARS = _build_invalid_chars()
 READ_ONLY = "read_only"
+
+# namespace for getinfo/setinfo
+BLOB = "blob"
