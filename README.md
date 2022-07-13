@@ -68,6 +68,10 @@ Users can call `getinfo` for the `basic` and `details` namespaces, however suppo
 time). There is a custom namespace called `blob` which can be used to set metadata on a
 blob, in the form of key value pairs which must be valid http headers.
 
+Additionally, the v2 filesystem for hierarchical namespaces supports posix permissions,
+so the `access` namespaces is supported for `getinfo` calls, which includes this
+information.
+
 See [docs](https://docs.pyfilesystem.org/en/latest/info.html) for more details.
 
 ## Note
