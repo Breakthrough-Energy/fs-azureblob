@@ -226,8 +226,8 @@ class BlobFSV2(FS):
         path = self.validatepath(path)
         if not self.exists(path):
             raise errors.ResourceNotFound(path)
-        if BLOB in info:
-            meta = info[BLOB]
-            with blobfs_errors(path):
-                blob = self.client.get_file_client(path)
-                blob.set_metadata(meta)
+        with blobfs_errors(path):
+            blob = self.client.get_file_client(path)
+            meta = blob.get_file_properties()[METADATA]
+            meta.update(info.get(BLOB, {}))
+            blob.set_metadata(meta)

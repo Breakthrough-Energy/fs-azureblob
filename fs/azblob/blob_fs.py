@@ -12,6 +12,7 @@ from fs.azblob.blob_file import BlobFile
 from fs.azblob.const import (
     ACCESSED,
     BASIC,
+    BLOB,
     CREATED,
     CREATION_TIME,
     DETAILS,
@@ -20,6 +21,7 @@ from fs.azblob.const import (
     IS_DIR,
     LAST_ACCESSED_ON,
     LAST_MODIFIED,
+    METADATA,
     METADATA_CHANGED,
     MODIFIED,
     NAME,
@@ -79,8 +81,8 @@ class BlobFS(FS):
             raise errors.ResourceNotFound(path)
 
         info = _basic_info(name=base_name, is_dir=False)
+        props = blob.get_blob_properties()
         if DETAILS in namespaces:
-            props = blob.get_blob_properties()
             details = {
                 ACCESSED: props[LAST_ACCESSED_ON],
                 CREATED: props[CREATION_TIME],
@@ -90,6 +92,9 @@ class BlobFS(FS):
             }
             _convert_to_epoch(details)
             info[DETAILS] = details
+
+        if BLOB in namespaces:
+            info[BLOB] = props[METADATA]
 
         return _info_from_dict(info, namespaces)
 
@@ -205,12 +210,8 @@ class BlobFS(FS):
         path = self._validatepath(path)
         if not self.exists(path):
             raise errors.ResourceNotFound(path)
-        if DETAILS in info:
-            details = info[DETAILS]
-            meta = {
-                LAST_ACCESSED_ON: str(details[ACCESSED]),
-                LAST_MODIFIED: str(details[MODIFIED]),
-            }
-            with blobfs_errors(path):
-                blob = self.client.get_blob_client(path)
-                blob.set_blob_metadata(meta)
+        with blobfs_errors(path):
+            blob = self.client.get_blob_client(path)
+            meta = blob.get_blob_properties()[METADATA]
+            meta.update(info.get(BLOB, {}))
+            blob.set_blob_metadata(meta)
