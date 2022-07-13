@@ -5,11 +5,13 @@ from fs.base import FS
 from fs.info import Info
 from fs.mode import Mode
 from fs.path import basename, dirname
+from fs.permissions import Permissions
 from fs.subfs import SubFS
 
 from fs import errors
 from fs.azblob.blob_file import BlobFile
 from fs.azblob.const import (
+    ACCESS,
     ACCESSED,
     BASIC,
     BLOB,
@@ -23,6 +25,7 @@ from fs.azblob.const import (
     METADATA_CHANGED,
     MODIFIED,
     NAME,
+    PERMISSIONS,
     READ_ONLY,
     SIZE,
 )
@@ -94,6 +97,15 @@ class BlobFSV2(FS):
 
         if BLOB in namespaces:
             info[BLOB] = props[METADATA]
+
+        if ACCESS in namespaces:
+            perms = blob.get_access_control()[PERMISSIONS]
+            info[ACCESS] = {
+                PERMISSIONS: Permissions(
+                    user=perms[:3], group=perms[3:6], other=perms[6:]
+                )
+            }
+
         return _info_from_dict(info, namespaces)
 
     def listdir(self, path: str) -> list:
