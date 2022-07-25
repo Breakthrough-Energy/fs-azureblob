@@ -16,6 +16,11 @@ bfs = fs.open_fs(f"azblobv2://{account}:{key}@{container}")
 lfs = read_only(fs.open_fs("/mnt/bes/pcm"))
 
 
+def copy_csv_files():
+    for fn in ("ScenarioList.csv", "ExecuteList.csv"):
+        copy_file(lfs, fn, bfs, fn)
+
+
 def _on_copy(src_fs, src_path, dst_fs, dst_path):
     msg = f"{src_path}\n"
     print(msg)
