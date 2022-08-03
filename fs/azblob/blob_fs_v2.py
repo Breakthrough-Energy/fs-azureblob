@@ -1,5 +1,6 @@
 from typing import Any, BinaryIO
 
+from azure.storage.blob import ContainerClient
 from azure.storage.filedatalake import DataLakeServiceClient
 from fs.base import FS
 from fs.info import Info
@@ -55,6 +56,11 @@ class BlobFSV2(FS):
             account_url=f"https://{account_name}.dfs.core.windows.net",
             credential=account_key,
         )
+        self._cc = ContainerClient(
+            account_url=f"https://{account_name}.blob.core.windows.net",
+            container_name=container,
+            credential=account_key,
+        )
         self.client = self._svc.get_file_system_client(container)
         self._check_container_client()
         self._meta = self._meta.copy()
@@ -108,13 +114,21 @@ class BlobFSV2(FS):
 
         return _info_from_dict(info, namespaces)
 
+    def _list_blob_names(self, path):
+        path = path.strip("/")
+        prefix = "" if path == "" else f"{path}/"
+        d1 = [p.name for p in self._cc.list_blobs(path)]
+        d2 = [d for d in d1 if d.startswith(prefix)]
+        d3 = [d[len(prefix) :].split("/")[0] for d in d2]
+        return list(set(d3))
+
     def listdir(self, path: str) -> list:
         self.check()
         path = self.validatepath(path)
         if not self.getinfo(path).is_dir:
             raise errors.DirectoryExpected(path)
-        paths = self.client.get_paths(path, recursive=False)
-        return [p["name"].split("/")[-1] for p in paths]
+        with blobfs_errors(path):
+            return [b for b in self._list_blob_names(path)]
 
     def openbin(
         self, path: str, mode: str = "r", buffering: int = -1, **options: Any
