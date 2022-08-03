@@ -107,8 +107,8 @@ class BlobFS(FS):
         num_parts = 0 if path == "" else len(parts)
         suffix = parts[-1]
         with blobfs_errors(path):
-            _all = [b.name.split("/") for b in self.client.list_blobs(path)]
-            _all = [p[num_parts] for p in _all if suffix in p or suffix == ""]
+            _all = (b.name.split("/") for b in self.client.list_blobs(path))
+            _all = (p[num_parts] for p in _all if suffix in p or suffix == "")
             return list(set(_all))
 
     def listdir(self, path: str) -> list:

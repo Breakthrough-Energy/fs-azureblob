@@ -117,9 +117,9 @@ class BlobFSV2(FS):
     def _list_blob_names(self, path):
         path = path.strip("/")
         prefix = "" if path == "" else f"{path}/"
-        d1 = [p.name for p in self._cc.list_blobs(path)]
-        d2 = [d for d in d1 if d.startswith(prefix)]
-        d3 = [d[len(prefix) :].split("/")[0] for d in d2]
+        d1 = (p.name for p in self._cc.list_blobs(path))
+        d2 = (d for d in d1 if d.startswith(prefix))
+        d3 = (d[len(prefix) :].split("/")[0] for d in d2)
         return list(set(d3))
 
     def listdir(self, path: str) -> list:
