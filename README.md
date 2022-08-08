@@ -88,6 +88,30 @@ ensure this package will function as expected.
 Additionally, this package is intended to operate on "block blobs". Other blob types
 include page blobs and append blobs. The package has not been tested on these types.
 
+## Examples
+
+One possible use case is creating an index of blobs within a publicly accessible
+container:
+
+```
+# same fs as above
+files = [f for f in my_fs.walk.files()]
+print(files)
+```
+
+which would yield something like:
+```
+['/version.json',
+ '/raw/usa_tamu/hydro_vJan2021.csv',
+ '/raw/usa_tamu/solar_vJan2021.csv',
+ '/raw/usa_tamu/demand_vJan2021.csv',
+ '/raw/usa_tamu/wind_vJan2021.csv',
+ '/raw/test_usa_tamu/hydro_vJan2021.csv',
+ '/raw/test_usa_tamu/solar_vJan2021.csv',
+ '/raw/test_usa_tamu/demand_vJan2021.csv',
+ '/raw/test_usa_tamu/wind_vJan2021.csv']
+
+```
 
 ## See also
 
