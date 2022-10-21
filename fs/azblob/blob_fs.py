@@ -46,24 +46,17 @@ class BlobFS(FS):
             container_name=container,
             credential=account_key,
         )
-        self._check_container_client()
         self._init()
         self._meta = self._meta.copy()
         self._meta[READ_ONLY] = account_key is None
 
-    def _check_container_client(self):
-        try:
-            if not self.client.exists():
-                raise errors.CreateFailed("Container does not exist")
-        except:  # noqa
-            raise errors.CreateFailed(
-                "Invalid parameters. Either incorrect account details, or container does not exist"
-            )
-
     def _init(self):
         root = self.client.get_blob_client(DIR_ENTRY)
-        if not root.exists():
-            root.upload_blob(b"")
+        try:
+            if not root.exists():
+                root.upload_blob(b"")
+        except:  # noqa
+            raise errors.CreateFailed("Credential needed to initialize root directory.")
 
     def getinfo(self, path: str, namespaces=None) -> Info:
         self.check()

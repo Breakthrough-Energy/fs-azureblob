@@ -56,18 +56,8 @@ class BlobFSV2(FS):
             credential=account_key,
         )
         self.client = self._svc.get_file_system_client(container)
-        self._check_container_client()
         self._meta = self._meta.copy()
         self._meta[READ_ONLY] = account_key is None
-
-    def _check_container_client(self):
-        try:
-            if not self.client.exists():
-                raise errors.CreateFailed("Container does not exist")
-        except:  # noqa
-            raise errors.CreateFailed(
-                "Invalid parameters. Either incorrect account details, or container does not exist"
-            )
 
     def getinfo(self, path: str, namespaces=None) -> Info:
         self.check()
