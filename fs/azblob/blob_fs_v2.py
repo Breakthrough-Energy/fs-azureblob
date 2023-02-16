@@ -186,7 +186,6 @@ class BlobFSV2(FS):
         overwrite: bool = False,
         preserve_time: bool = False,
     ) -> None:
-
         self.check()
         if not overwrite and self.exists(dst_path):
             raise errors.DestinationExists(dst_path)
